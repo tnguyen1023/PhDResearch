@@ -14,6 +14,6 @@ pip install -r requirements.txt
 
 # Run the Comparison Script
 ```bash
-python3 ./simulated_maxsat_more_comparisions_best4_parallel_poc4.py
+python3 ./simulated_maxsat_more_comparisions_best5_pysat_parallel_poc4.py
 
 
