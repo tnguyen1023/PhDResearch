@@ -16,4 +16,10 @@ pip install -r requirements.txt
 ```bash
 python3 ./simulated_maxsat_more_comparisions_best5_pysat_parallel_poc4.py
 
+OR 
+
+python3 ./simulated_maxsat_more_comparisions_best7_hybrid_maxsat_parallel_poc4.py
+
+```
+
 
