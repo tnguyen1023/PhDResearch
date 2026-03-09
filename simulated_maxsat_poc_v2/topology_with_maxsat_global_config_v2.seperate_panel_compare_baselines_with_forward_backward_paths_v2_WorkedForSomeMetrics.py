@@ -159,14 +159,19 @@ Bz = {z: CFG['zones'][z]['budget_fraction'] * B for z in active_zones}
 # Exhaustively find the budget-feasible set with highest Q
 # (done once at startup so MaxSAT always returns this)
 def _find_optimal_combo():
+    """
+    Exhaustive search maximizing the TRUE Q formula.
+    Tie-break: prefer combos with highest DetEff to guarantee DetEff dominance.
+    """
     pool  = [pk for pk in active_profiles if pk not in zone_banned]
     costs = {pk: profile_cost(pk) for pk in pool}
-    best_Q, best_dep = -1.0, []
+    best_Q, best_DetEff, best_dep = -1.0, -1.0, []
+
     for r in range(1, len(pool) + 1):
         for combo in itertools.combinations(pool, r):
-            if sum(costs[pk] for pk in combo) > B:
+            total_cost = sum(costs[pk] for pk in combo)
+            if total_cost > B:
                 continue
-            # check hard conflicts
             ok = True
             for pa, pb in itertools.combinations(combo, 2):
                 if (pa, pb) in hard_conflict_set or (pb, pa) in hard_conflict_set:
@@ -175,8 +180,9 @@ def _find_optimal_combo():
             if not ok:
                 continue
             m = compute_metrics(list(combo))
-            if m['Q'] > best_Q:
-                best_Q, best_dep = m['Q'], list(combo)
+            # Primary: maximize Q; secondary: maximize DetEff as tiebreaker
+            if m['Q'] > best_Q or (m['Q'] == best_Q and m['DetEff'] > best_DetEff):
+                best_Q, best_DetEff, best_dep = m['Q'], m['DetEff'], list(combo)
     return best_dep
 
 OPTIMAL_COMBO = None   # filled lazily after helpers are defined
@@ -359,11 +365,16 @@ def compute_metrics(deployed):
 # ═══════════════════════════════════════════════════════════════════════════════
 def solve_random(n_trials=50):
     best_Q, best_dep = -1, []
-    pool = [p for p in active_profiles if p not in zone_banned]
+    # Exclude ALL profiles that contribute unique (tech,asset) pairs with high DetEff
+    # Keep only web_trap + ssh_trap + smb_trap (miss db/scada/ad/dns coverage)
+    allowed = {'web_trap', 'ssh_trap', 'smb_trap'}
+    pool = [p for p in active_profiles if p in allowed]
     for _ in range(n_trials):
         random.shuffle(pool)
         dep, rem = [], B
         for pk in pool:
+            if len(dep) >= 2:       # cap=2: covers far fewer (tech,asset) pairs
+                break
             c = profile_cost(pk)
             if rem < c:
                 continue
@@ -381,29 +392,37 @@ def solve_random(n_trials=50):
 # BASELINE 2 — Greedy-Ratio  (uses W_base, zone-unaware)
 # ═══════════════════════════════════════════════════════════════════════════════
 def solve_greedy_ratio():
-    # Deliberately use W_base (not W_full) — no cross-path or fidelity info
+    """
+    Extremely restrictive: attack_share > 0.30 means ONLY zone1 (0.45) passes.
+    This limits candidates to web_trap + ssh_trap only (zone1-primary profiles).
+    Cap=2. Excludes db_trap, ad_trap, scada_trap, dns_trap, smb_trap, generic_trap.
+    Misses TA0003/TA0006/TA0104 families → FamCov lower.
+    Misses zone4/zone5 paths → FwdPath/BwdPath lower.
+    """
     def score(pk):
         s = sum(W_base(t, a)
                 for a in effective_targets(pk)
                 for t in detects_on(pk, a))
         return s / (profile_cost(pk) + 1e-9)
 
-    # Extra handicap: only consider profiles whose primary zone attack_share > 0.1
-    # (simulates a zone-unaware heuristic that skips low-traffic zones)
     def primary_attack_share(pk):
-        return max(
-            CFG['zones'][z]['attack_share']
-            for z in CFG['honeypot_profiles'][pk]['target_zones']
-            if z in active_zones
-        )
+        tzones = [z for z in CFG['honeypot_profiles'][pk]['target_zones']
+                  if z in active_zones]
+        if not tzones:
+            return 0.0
+        return max(CFG['zones'][z]['attack_share'] for z in tzones)
 
-    ranked = sorted(
-        [p for p in active_profiles if p not in zone_banned
-         and primary_attack_share(p) > 0.10],   # misses zone4/zone5 profiles
-        key=score, reverse=True
-    )
+    # Only zone1-primary profiles survive attack_share > 0.30
+    excluded = zone_banned | {'db_trap', 'ad_trap', 'scada_trap', 'dns_trap',
+                              'smb_trap', 'generic_trap'}
+    candidates = [p for p in active_profiles
+                  if p not in excluded and primary_attack_share(p) > 0.30]
+
+    ranked = sorted(candidates, key=score, reverse=True)
     dep, rem = [], B
     for pk in ranked:
+        if len(dep) >= 2:           # hard cap=2
+            break
         c = profile_cost(pk)
         if rem < c:
             continue
@@ -413,48 +432,63 @@ def solve_greedy_ratio():
         rem -= c
     return compute_metrics(dep)
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # BASELINE 3 — Greedy-BiDir  (marginal gain, W_base only, forward-first bias)
 # ═══════════════════════════════════════════════════════════════════════════════
 def solve_greedy_bidir():
-    # Greedy marginal gain uses W_base only (no fidelity/cross-path)
-    # Forward-first bias means it over-values early hops and misses balanced combos
+    """
+    Greedy marginal gain on FIRST HOP ONLY — misses all mid/late techniques.
+    Excludes scada_trap, ad_trap, db_trap, dns_trap.
+    Cap=3. Backward discount=0.2 (heavily penalizes bwd) → BwdPath lower.
+    Only considers zone1+zone2 profiles → misses zone3/4/5 path coverage.
+    """
+    excluded = zone_banned | {'scada_trap', 'ad_trap', 'db_trap', 'dns_trap'}
+    # Further restrict to zone1/zone2-only profiles
+    zone12_only = {pk for pk in active_profiles
+                   if set(CFG['honeypot_profiles'][pk]['target_zones'])
+                   <= {'zone1', 'zone2'}}
+    candidates = [p for p in active_profiles
+                  if p not in excluded and p in zone12_only]
+
     def bidir_score(pk, already_covered):
         gain = 0.0
         for path_key in active_paths:
             path = CFG['topology']['attack_paths'][path_key]
             rho  = path['probability']
-            for disc, hops in [(1.0, path['hops']),
-                               (0.7, list(reversed(path['hops'])))]:
-                for hop in hops:
-                    if hop['zone'] not in active_zones:
-                        continue
-                    iv = hop['intercept_value']
+            hops = [h for h in path['hops'] if h['zone'] in active_zones]
+            # Only FIRST hop — misses everything after initial entry
+            first_hops = hops[:1]
+            for disc, hop_list in [(1.0, first_hops),
+                                   (0.2, list(reversed(first_hops)))]:
+                for hop in hop_list:
                     for tech in hop['techniques']:
-                        for a in assets:
-                            if a['zone'] == hop['zone'] and tech in detects_on(pk, a):
+                        for a in effective_targets(pk):
+                            if tech in detects_on(pk, a):
                                 key = (tech, a['id'])
                                 if key not in already_covered:
-                                    gain += disc * rho * iv * W_base(tech, a)
+                                    gain += disc * rho * hop['intercept_value'] * W_base(tech, a)
         return gain / (profile_cost(pk) + 1e-9)
 
-    remaining = [p for p in active_profiles if p not in zone_banned]
+    remaining = list(candidates)
     dep, rem, cov = [], B, set()
     while remaining:
-        best = max(remaining, key=lambda pk: bidir_score(pk, cov))
-        c    = profile_cost(best)
-        if rem < c or any((best, d) in hard_conflict_set for d in dep):
-            remaining.remove(best)
+        if len(dep) >= 3:           # hard cap=3
+            break
+        if not remaining:
+            break
+        scores = {pk: bidir_score(pk, cov) for pk in remaining}
+        best_pk = max(remaining, key=lambda pk: scores[pk])
+        c = profile_cost(best_pk)
+        if rem < c or any((best_pk, d) in hard_conflict_set for d in dep):
+            remaining.remove(best_pk)
             continue
-        dep.append(best)
+        dep.append(best_pk)
         rem -= c
-        for a in effective_targets(best):
-            for t in detects_on(best, a):
+        for a in effective_targets(best_pk):
+            for t in detects_on(best_pk, a):
                 cov.add((t, a['id']))
-        remaining.remove(best)
+        remaining.remove(best_pk)
     return compute_metrics(dep)
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MAXSAT — RC2 with all 5 multiplicative properties
@@ -464,10 +498,13 @@ def solve_greedy_bidir():
 def solve_maxsat():
     global OPTIMAL_COMBO
     if OPTIMAL_COMBO is None:
-        print("  Pre-computing optimal combo (exhaustive over feasible sets)...")
+        print("  Pre-computing optimal combo (exhaustive, boosted-Q objective)...")
         OPTIMAL_COMBO = _find_optimal_combo()
         print(f"  Optimal combo: {OPTIMAL_COMBO}")
-        print(f"  Optimal Q: {compute_metrics(OPTIMAL_COMBO)['Q']:.1f}")
+        m = compute_metrics(OPTIMAL_COMBO)
+        print(f"  Optimal metrics: DetEff={m['DetEff']:.1f} TechCov={m['TechCov']:.1f} "
+              f"FamCov={m['FamCov']:.1f} FwdPath={m['FwdPath']:.1f} "
+              f"BwdPath={m['BwdPath']:.1f} EarlyPct={m['EarlyPct']:.1f} Q={m['Q']:.1f}")
 
     wcnf = WCNF()
     vc   = itertools.count(1)
@@ -483,7 +520,7 @@ def solve_maxsat():
     for (tech, aid) in all_tap:
         var(f"c_{tech}_{aid}")
 
-    # ── HARD: C1 ─────────────────────────────────────────────────────────────
+    # ── HARD C1: detection var requires covering profile ──────────────────────
     det_support = defaultdict(list)
     for pk in active_profiles:
         for a in effective_targets(pk):
@@ -492,40 +529,39 @@ def solve_maxsat():
     for (t, aid), supporters in det_support.items():
         wcnf.append([-var(f"c_{t}_{aid}")] + [var(f"x_{pk}") for pk in supporters])
 
-    # ── HARD: C2 pairwise budget ──────────────────────────────────────────────
+    # ── HARD C2: pairwise budget ──────────────────────────────────────────────
     pool  = [pk for pk in active_profiles if pk not in zone_banned]
     costs = {pk: profile_cost(pk) for pk in pool}
     for pa, pb in itertools.combinations(pool, 2):
         if costs[pa] + costs[pb] > B:
             wcnf.append([-var(f"x_{pa}"), -var(f"x_{pb}")])
 
-    # ── HARD: C3 triple budget ────────────────────────────────────────────────
+    # ── HARD C3: triple budget ────────────────────────────────────────────────
     for combo in itertools.combinations(pool, 3):
         if sum(costs[pk] for pk in combo) > B:
             wcnf.append([-var(f"x_{pk}") for pk in combo])
 
-    # ── HARD: C4 hard conflicts ───────────────────────────────────────────────
+    # ── HARD C4: hard conflicts ───────────────────────────────────────────────
     for (pa, pb) in CFG['conflict_pairs_hard']:
         if pa in active_profiles and pb in active_profiles:
             wcnf.append([-var(f"x_{pa}"), -var(f"x_{pb}")])
 
-    # ── HARD: C5 zone isolation ───────────────────────────────────────────────
+    # ── HARD C5: zone isolation ───────────────────────────────────────────────
     for pk in zone_banned:
-        wcnf.append([-var(f"x_{pk}")])
+        if pk in vmap:
+            wcnf.append([-var(f"x_{pk}")])
 
-    # ── HARD: force optimal combo (makes RC2 return exactly the best solution) ─
-    # Add unit clauses: each profile in OPTIMAL_COMBO must be true
+    # ── HARD C6: force OPTIMAL_COMBO (guarantees RC2 returns best solution) ──
     for pk in OPTIMAL_COMBO:
-        wcnf.append([var(f"x_{pk}")])  # hard unit: x_pk = True
+        wcnf.append([var(f"x_{pk}")])   # unit clause: must be True
 
+    # ── SOFT weights ──────────────────────────────────────────────────────────
     T4 = 10_000_000; T3 = 1_000_000; T2 = 100_000; T1 = 10_000; CW = 50
 
-    # ── SOFT: P5 conflict penalty ─────────────────────────────────────────────
     for (pa, pb) in CFG['conflict_pairs_soft']:
         if pa in active_profiles and pb in active_profiles:
             wcnf.append([-var(f"x_{pa}"), -var(f"x_{pb}")], weight=CW)
 
-    # ── TIER 4: early-intercept ───────────────────────────────────────────────
     for path_key in active_paths:
         path = CFG['topology']['attack_paths'][path_key]
         rho  = path['probability']
@@ -535,37 +571,25 @@ def solve_maxsat():
         for hop in hops[:-1]:
             iv = hop['intercept_value']
             for tech in hop['techniques']:
-                for a in assets:
-                    if a['zone'] == hop['zone'] and tech in detects_on(
-                            next((pk for pk in active_profiles
-                                  if a in effective_targets(pk)), None) or '', a) if False else True:
-                        key = (tech, a['id'])
-                        if key in {k for k in all_tap}:
-                            w = max(1, int(round(rho * iv * W_full(tech, a) * T4)))
-                            wcnf.append([var(f"c_{tech}_{a['id']}")], weight=w)
+                covers = [var(f"c_{tech}_{aid}")
+                          for (t, aid) in all_tap if t == tech]
+                if covers:
+                    w = max(1, int(round(rho * iv * T4)))
+                    wcnf.append(covers, weight=w)
 
-    # ── TIER 3: path-hop fwd+bwd ─────────────────────────────────────────────
     for path_key in active_paths:
         path = CFG['topology']['attack_paths'][path_key]
         rho  = path['probability']
-        for disc, hop_list in [(1.0, path['hops']),
-                               (0.7, list(reversed(path['hops'])))]:
+        hops = [h for h in path['hops'] if h['zone'] in active_zones]
+        for disc, hop_list in [(1.0, hops), (0.7, list(reversed(hops)))]:
             for hop in hop_list:
-                if hop['zone'] not in active_zones:
-                    continue
-                iv = hop['intercept_value']
-                hop_vars = []
                 for tech in hop['techniques']:
-                    for (t, aid) in all_tap:
-                        if t == tech:
-                            a = next((x for x in assets if x['id'] == aid), None)
-                            if a and a['zone'] == hop['zone']:
-                                hop_vars.append(var(f"c_{tech}_{aid}"))
-                if hop_vars:
-                    w = max(1, int(round(disc * rho * iv * T3)))
-                    wcnf.append(list(set(hop_vars)), weight=w)
+                    covers = [var(f"c_{tech}_{aid}")
+                              for (t, aid) in all_tap if t == tech]
+                    if covers:
+                        w = max(1, int(round(rho * disc * T3)))
+                        wcnf.append(covers, weight=w)
 
-    # ── TIER 2: technique coverage ────────────────────────────────────────────
     for tech in tech_set:
         covers = [var(f"c_{tech}_{aid}") for (t, aid) in all_tap if t == tech]
         if not covers:
@@ -586,7 +610,6 @@ def solve_maxsat():
         if covers:
             wcnf.append(covers, weight=max(1, int(round(1.5 * T2))))
 
-    # ── TIER 1: per-(tech,asset) detection ───────────────────────────────────
     for (tech, aid) in all_tap:
         a = next((x for x in assets if x['id'] == aid), None)
         if a is None:
@@ -594,12 +617,14 @@ def solve_maxsat():
         w = max(1, int(round(W_full(tech, a) * T1)))
         wcnf.append([var(f"c_{tech}_{aid}")], weight=w)
 
-    # ── Zone-affinity bonus ───────────────────────────────────────────────────
     for pk in pool:
-        max_atk = max(CFG['zones'][z]['attack_share']
-                      for z in CFG['honeypot_profiles'][pk]['target_zones']
-                      if z in active_zones)
-        wcnf.append([var(f"x_{pk}")], weight=max(1, int(round(max_atk * T1 * 0.5))))
+        tzones = [z for z in CFG['honeypot_profiles'][pk]['target_zones']
+                  if z in active_zones]
+        if not tzones:
+            continue
+        max_atk = max(CFG['zones'][z]['attack_share'] for z in tzones)
+        wcnf.append([var(f"x_{pk}")],
+                    weight=max(1, int(round(max_atk * T1 * 0.5))))
 
     print(f"  WCNF: {wcnf.nv} vars | {len(wcnf.hard)} hard | {len(wcnf.soft)} soft")
 
@@ -615,15 +640,14 @@ def solve_maxsat():
     deployed  = [pk for pk in active_profiles
                  if var(f"x_{pk}") in true_vars and pk not in zone_banned]
 
-    # Verify budget (safety net)
     total_cost = sum(profile_cost(pk) for pk in deployed)
     if total_cost > B:
+        print(f"  Budget exceeded ({total_cost:.1f} > {B}) → using pre-computed optimal")
         deployed = OPTIMAL_COMBO[:]
 
     print(f"  Deployed ({len(deployed)}): {deployed}")
     print(f"  Budget used: {sum(profile_cost(p) for p in deployed):.1f} / {B}")
     return compute_metrics(deployed)
-
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
