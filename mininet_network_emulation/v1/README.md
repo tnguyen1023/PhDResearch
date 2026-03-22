@@ -20,53 +20,6 @@ python3 ~/honeypot-maxsat/src/run_testbed.py
 -rw-r--r-- 1 root root 7913 Mar 21 19:46 maxsat_solver.py
 drwxr-xr-x 2 root root 4096 Mar 22 17:04 __pycache__
 
------  python3 ~/honeypot-maxsat/src/run_testbed.py
-=================================================================
-Kill-Chain Honeypot Placement via MAXSAT
-Budget: 530 | All-5 cost: 1075
-=================================================================
-
-[1] MAXSAT Solver (RC2)...
-Budget          : 530
-All-5 cost      : 1075 (*** tradeoffs required ***)
-Air-gap banned  : none
-Budget clauses  : 7
-
-=== Running RC2 MAXSAT Solver ===
-Clauses — Hard: 7 | Soft: 70
-Deployed  : ['web_trap', 'ssh_trap']
-Cost      : 450 / 530
-Remaining : 80
-UNSAT wt  : 196342
-
-[2] Monte Carlo (50,000 trials)...
-Early catch : 100.0%
-Catch rate  : 100.0%
-Miss rate   : 0.0%
-Mean hops   : 0.00
-
-[3] Quality Score Q (paper Eq.21)...
-
-Metric        Value   Weight   Contrib
-----------------------------------------
-DetEff        40.0%     0.35     14.00
-TechCov       54.5%     0.25     13.64
-FamCov        44.4%     0.15      6.67
-FwdPath       75.0%     0.15     11.25
-BwdPath       75.0%     0.10      7.50
-  ----------------------------------------
-Q Score       53.05
-
-[4] Budget-Limited Baseline Comparison...
-
-Method         Cost  Deployed                                           Q  Early%  Miss%
-----------------------------------------------------------------------------------------
-MAXSAT          450  ['web_trap', 'ssh_trap']                       53.05   100.0    0.0
-Greedy          500  ['generic_trap', 'dns_trap', 'ssh_trap']       51.95   100.0    0.0
-Random          500  ['dns_trap', 'ssh_trap', 'generic_trap']       51.95   100.0    0.0
-
-MAXSAT vs Greedy: +2.1%
-
 
 ### UTM Firefox Reset Font Cache
 
