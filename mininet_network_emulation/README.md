@@ -1,5 +1,5 @@
 
-### UTM Setup/Install ENV -> In UTM MinitNet1 
+### UTM Setup/Install ENV -> In UTM MinitNet1
 
 ### Start -> In UTM MinitNet1
 
@@ -9,6 +9,111 @@
 source ~/honeypot-env/bin/activate
 
 python3 ~/honeypot-maxsat/src/run_testbed.py
+
+#### !!! Run the topology.py file that creates a 5-zone Mininet network
+
+# -> You need 3 terminals. Here's the exact sequence:
+
+# Install it properly into system Python
+cd ~/mininet
+sudo python3 setup.py install
+
+# Check if mn command exists
+which mn
+mn --version 
+
+
+# Terminal 1 — Start POX Controller First
+cd ~/pox
+python3 pox.py honeypot_controller forwarding.l2_learning
+```
+
+Wait until you see:
+```
+INFO:honeypot_controller:Honeypot controller launched
+INFO:core:POX 0.7.0 (gar) is up.
+
+# Terminal 2 — Run the Topology
+# Clean any leftover Mininet state first
+sudo mn -c
+
+# Run topology
+sudo python3 ~/honeypot-maxsat/src/topology.py
+```
+
+You should see:
+```
+=== 5-Zone Topology Started ===
+zone1 DMZ:      h_web(10.0.0.1)  h_dns(10.0.0.2)  h_ssh1(10.0.0.3)
+zone2 Internal: h_db(10.0.1.1)   h_ssh2(10.0.1.2) h_smb(10.0.1.3)
+zone3 Cloud:    h_cloud1(10.0.2.1) h_cloud2(10.0.2.2)
+zone4 OT:       h_scada(10.0.3.1) h_plc(10.0.3.2) [AIR-GAPPED]
+zone5 Mgmt:     h_ad(10.0.4.1)   h_mgmt(10.0.4.2)
+mininet>
+
+
+# Terminal 3 — Run MAXSAT Solver
+source ~/honeypot-env/bin/activate
+python3 ~/honeypot-maxsat/src/run_testbed.py
+
+# Inside the Mininet CLI (Terminal 2)
+Once at the mininet> prompt, test connectivity:
+bash# Test same zone (should work)
+mininet> h_web ping -c2 h_dns
+
+# Test cross-zone (should work)
+mininet> h_web ping -c2 h_db
+
+# Test air gap (should FAIL - zone4 isolated)
+mininet> h_scada ping -c2 h_web
+
+# Show all nodes
+mininet> nodes
+
+# Show all links
+mininet> net
+
+# Run iperf between zones
+mininet> iperf h_web h_db
+
+# Open xterm on a specific host
+mininet> xterm h_web
+
+# Exit
+mininet> exit
+
+If You Get Errors
+bash# Port 6633 already in use
+sudo fuser -k 6633/tcp
+sudo mn -c
+
+# OVS not running
+sudo systemctl start openvswitch-switch
+
+# Mininet not found with sudo
+sudo env PATH=$PATH python3 ~/honeypot-maxsat/src/topology.py
+```
+
+---
+
+## Full Terminal Layout
+```
+┌─────────────────────────┬──────────────────────────┐
+│  Terminal 1             │  Terminal 2              │
+│  POX Controller         │  Mininet Topology        │
+│                         │                          │
+│  cd ~/pox               │  sudo mn -c              │
+│  python3 pox.py \       │  sudo python3 \          │
+│    honeypot_controller \ │    topology.py           │
+│    forwarding.l2_learning│                          │
+│                         │  mininet> h_web ping...  │
+├─────────────────────────┴──────────────────────────┤
+│  Terminal 3                                        │
+│  MAXSAT Solver                                     │
+│                                                    │
+│  source ~/honeypot-env/bin/activate                │
+│  python3 ~/honeypot-maxsat/src/run_testbed.py      │
+└────────────────────────────────────────────────────┘
 
 #### 
 
