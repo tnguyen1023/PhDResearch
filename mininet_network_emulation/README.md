@@ -14,14 +14,13 @@ python3 ~/honeypot-maxsat/src/run_testbed.py
 
 # -> You need 3 terminals. Here's the exact sequence:
 
-# Install it properly into system Python
-cd ~/mininet
-sudo python3 setup.py install
-
 # Check if mn command exists
 which mn
-mn --version 
+mn --version
 
+# If Failed -> mn version -> Then Try Below -> Install it properly into system Python
+cd ~/mininet
+sudo python3 setup.py install
 
 # Terminal 1 — Start POX Controller First
 cd ~/pox
