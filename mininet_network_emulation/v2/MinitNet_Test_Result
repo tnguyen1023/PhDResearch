@@ -1,0 +1,105 @@
+
+=====
+
+MaxSAT outperforms all baselines by +35.3% on Q score — well above the 20% target.
+
+
+
+=====
+
+(honeypot-env) root@kali1:~/pox# python3 ~/honeypot-maxsat/src/run_testbed.py
+====================================================================
+  Kill-Chain Honeypot Placement via MAXSAT (RC2)
+  Budget=530 | All-5=1075 | Zones=5 | Paths=5
+====================================================================
+
+[1] MAXSAT Solver (RC2) — kill-chain aware, globally optimal...
+  Budget          : 530
+  All-5 cost      : 1075 (*** tradeoffs required ***)
+  Air-gap banned  : none
+  Budget clauses  : 7
+  Valid combos    : 15
+
+=== Running RC2 MAXSAT Solver ===
+  Clauses — Hard: 7 | Soft: 83
+  Deployed  : ['ssh_trap', 'db_trap']
+  Cost      : 525 / 530
+  Remaining : 5
+  UNSAT wt  : 434474
+
+[2] Monte Carlo Validation (50,000 trials)...
+  Early catch : 100.0%
+  Catch rate  : 100.0%
+  Miss rate   : 0.0%
+
+[3] Quality Score Q (paper Eq.21)...
+
+  Metric        Value   Weight   Contrib
+  --------------------------------------------
+  DetEff        66.7%     0.35     23.34
+  TechCov       54.5%     0.25     13.62
+  FamCov        55.6%     0.15      8.34
+  FwdPath       85.5%     0.15     12.82
+  BwdPath       59.8%     0.10      5.98
+  --------------------------------------------
+  Q Score       64.11
+
+[4] Naive Baselines (structurally cannot find optimal)...
+
+  Greedy-Count ranking (count/dollar):
+    generic_trap     3 techs / $125 = 0.0240
+    dns_trap         3 techs / $175 = 0.0171
+    ssh_trap         3 techs / $200 = 0.0150
+    web_trap         3 techs / $250 = 0.0120
+    db_trap          3 techs / $325 = 0.0092
+
+  Greedy-Zone ranking (zones/dollar):
+    dns_trap         3 zones / $175 = 0.01714
+    generic_trap     2 zones / $125 = 0.01600
+    ssh_trap         3 zones / $200 = 0.01500
+    web_trap         2 zones / $250 = 0.00800
+    db_trap          2 zones / $325 = 0.00615
+
+  Greedy-FirstHop ranking (first-hop coverage/dollar):
+    web_trap         score=0.00472  (db_trap=0 — never covers hop1!)
+    ssh_trap         score=0.00290  (db_trap=0 — never covers hop1!)
+    generic_trap     score=0.00060  (db_trap=0 — never covers hop1!)
+    db_trap          score=0.00000  (db_trap=0 — never covers hop1!)
+    dns_trap         score=0.00000  (db_trap=0 — never covers hop1!)
+
+  Method               $  Deployed                                          Q   Early   Miss
+  ------------------------------------------------------------------------------------------
+  MAXSAT (RC2)       525  ['ssh_trap', 'db_trap']                       64.11   100.0    0.0 ◄ BEST
+  Greedy-Count       500  ['generic_trap', 'dns_trap', 'ssh_trap']      39.82   100.0    0.0
+  Greedy-Zone        500  ['dns_trap', 'generic_trap', 'ssh_trap']      39.82   100.0    0.0
+  Greedy-FirstHop    450  ['web_trap', 'ssh_trap']                      43.63   100.0    0.0
+  Random             500  ['dns_trap', 'ssh_trap', 'generic_trap']      39.82   100.0    0.0
+
+  =======================================================
+  Best naive baseline Q  : 43.63
+  MAXSAT (RC2) Q         : 64.11
+  Improvement            : +46.9%
+  Target                 : ≥ +20%
+  =======================================================
+
+  ✓ MAXSAT OUTPERFORMS all baselines by 46.9% ≥ 20% ✓
+
+  === Why MAXSAT Wins: Kill-Chain Awareness ===
+
+  KEY INSIGHT — Technique importance (weights):
+    web_trap       : ['T1190', 'T1133', 'T1059']  unweighted=3  weighted=4.5
+    ssh_trap       : ['T1110', 'T1021', 'T1078']  unweighted=3  weighted=9.5
+    db_trap        : ['T1213', 'T1048', 'T1485']  unweighted=3  weighted=12.5
+    dns_trap       : ['T1572', 'T1095', 'T1046']  unweighted=3  weighted=3.0
+    generic_trap   : ['T1046', 'T1082', 'T1110']  unweighted=3  weighted=3.5
+
+  db_trap ALONE covers 3 high-prob paths at NON-FINAL hops:
+    web_to_db            hop2 [L4-early] tw=3.0 PW=1.890
+    cloud_to_db          hop2 [L4-early] tw=3.0 PW=1.350
+    data_theft           hop2 [L4-early] tw=7.5 PW=2.700
+    db_trap total L4 cross-path PW = 5.940
+    Greedy-Count NEVER sees this — db_trap ranks LAST (3/325=0.009 vs generic 3/125=0.024)
+
+✓ Testbed complete
+
+=====
