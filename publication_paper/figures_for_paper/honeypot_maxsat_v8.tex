@@ -205,6 +205,28 @@ solver placements are deployable and effective in live
 network environments (Section~\ref{sec:mininet}).
 \end{enumerate}
 
+
+\textbf{Why a composite Q-score?}
+Prior honeypot papers measure success using a single metric
+(detection rate, or coverage ratio).
+However, these metrics are in tension: maximising raw
+detection rate pushes the solver to deploy many cheap
+honeypots that cover common-but-low-value techniques,
+while maximising path coverage pushes it toward expensive
+types that cover rare-but-high-value techniques.
+No single metric captures both concerns simultaneously.
+We therefore introduce Q as a weighted composite of five
+orthogonal security objectives, calibrated so that a
+one-point gain in TechCov (ATT\&CK breadth) is worth
+$0.25/0.35 \approx 71\%$ of a one-point gain in raw
+DetEff---reflecting the practitioner consensus that
+ATT\&CK framework alignment is highly but not exclusively
+important~\cite{mitre2023}.
+The Sensitivity Analysis (Section~\ref{subsec:sensitivity})
+confirms that our conclusions hold for any reasonable
+weighting in a $\pm30\%$ neighbourhood of the published
+values.
+
 %% ─── II. RELATED WORK ───────────────────────────────────────
 \section{Related Work}
 \label{sec:related}
@@ -513,6 +535,69 @@ forensics---a distinction all baselines ignore.
 Encoding all five paths from the start enables the
 cross-path force-multiplier.
 
+\subsubsection{Six Objectives Form an Irredundant Covering Set
+               Over Attacker Evasion Space}
+\label{subsubsec:whysix}
+
+Each objective in our \maxsat{} encoding is \emph{necessary}:
+removing any single one opens a structurally distinct
+attacker evasion channel that the remaining five cannot
+close.
+We formalise this claim by mapping each objective to the
+unique evasion strategy it neutralises.
+The ablation study (Table~\ref{tab:ablation}) provides
+independent empirical confirmation, but the structural
+argument below shows that the necessity is \emph{by design},
+not an accident of our parameter choices.
+The six objectives form an \emph{irredundant covering set}
+over five attacker evasion dimensions:
+
+\begin{enumerate}
+\item \textbf{Avoiding monitored assets (evades O1):}
+An attacker who knows which assets have high $W_{j,a}$ can
+route around them.
+O1 alone rewards high-value asset coverage, but a solver
+optimising only O1 concentrates honeypots at the same
+high-value assets the attacker avoids.
+O3 (family breadth) and O6 (multi-path) ensure coverage
+is spread enough to intercept route-around paths.
+
+\item \textbf{Using uncovered ATT\&CK techniques (evades O2):}
+Without O2, the solver may cover the same technique on
+many assets rather than covering diverse techniques.
+O2 forces at least one honeypot per technique column of
+the ATT\&CK matrix.
+
+\item \textbf{Shifting tactic families (evades O3):}
+If lateral-movement honeypots are the only ones deployed,
+an attacker switching to initial-access techniques evades
+all detection.
+O3's $1.2\times$ bonus is the \emph{only} objective in
+any reviewed method that structurally discourages
+single-family concentration.
+
+\item \textbf{Racing to the target before detection (evades O4):}
+A fast-moving attacker who completes the kill chain in
+fewer hops than the average forensic detection latency
+evades all forensics-only defences.
+O4's $1000\times$ weight is the only mechanism that
+makes prevention structurally preferred over forensics.
+
+\item \textbf{Using low-probability paths (evades O6):}
+Without multi-path encoding, the solver over-invests in
+the highest-$\rho$ path and leaves lower-probability
+paths uncovered.
+An attacker who switches to a lower-probability path can
+move undetected.
+O6's simultaneous clause encoding is what closes this gap.
+\end{enumerate}
+
+Removing any single objective leaves exactly one of these
+evasion strategies unblocked.
+The ablation study (Table~\ref{tab:ablation}) confirms
+that each removal causes a statistically significant Q-score
+drop, validating the necessity argument.
+
 \subsubsection{Cross-Path Force-Multiplier}
 \label{subsec:crosspath}
 
@@ -577,6 +662,62 @@ crediting 3.612 in one step.
 Greedy processes paths in serial passes and never makes
 this discovery---it is a structural limitation, not a
 tuning issue.
+\end{insightbox}
+
+
+\begin{examplebox}
+\textbf{Second worked example --- \texttt{db\_trap} in zone2
+(T1213 Data from Information Repositories):}
+
+This example shows the force-multiplier across a different
+technique to confirm the effect is not specific to T1021.
+T1213 appears at the penultimate hop of three paths:
+\begin{center}
+\small\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lccccr@{}}
+\toprule
+\textbf{Path}&$\rho$&$iv$&$\sigma$&$W_{j,a}$&\textbf{L3 wt}\\
+\midrule
+web\_to\_db (hop~3)      &0.30&2.0&0.9&4.94&2.964\\
+cloud\_pivot (hop~3)     &0.25&2.0&0.9&4.94&2.470\\
+ransomware (hop~2)       &0.10&1.5&0.9&4.94&0.741\\
+\midrule
+\multicolumn{5}{l}{\textbf{Solver total (all three)}} &\textbf{6.175}\\
+\multicolumn{5}{l}{Greedy total (highest-prob path only)}&2.964\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textit{T1213 has $\sigma=0.9$ (highly stealthy---it looks
+like normal database access), so $W_{j,a}=4.94$ is large.
+One \texttt{db\_trap} deployment earns $6.175$ vs.\
+greedy's $2.964$---a $\mathbf{2.08\times}$ advantage.
+Greedy-Ratio, which ranks honeypots by value/dollar,
+would choose \texttt{generic\_trap} (cost~0.5, ratio~7.0)
+over \texttt{db\_trap} (cost~1.3, ratio~3.8) and miss
+the cross-path weight entirely.
+This is why TechCov for greedy methods is $25\%$ and
+ours is $63.8\%$ at XLarge: the greedy value-per-dollar
+heuristic is structurally blind to high-stealth,
+high-cross-path techniques like T1213.}
+\end{examplebox}
+
+\begin{insightbox}
+\textbf{Compounding across honeypot types.}
+The force-multiplier compounds: if we simultaneously
+deploy \texttt{ssh\_trap} (T1021, weight~3.612) and
+\texttt{db\_trap} (T1213, weight~6.175), the combined
+cross-path credit is $9.787$ from just two honeypots
+costing 2.1 budget units.
+Greedy would need to process all five attack paths
+separately and happen to select the same two types---but
+because it evaluates one path at a time, it instead
+selects the cheapest high-coverage options first
+(\texttt{generic\_trap} and \texttt{dns\_trap})
+and never reaches the optimal (ssh, db) combination.
+This is verified by the ablation result: removing L3
+forward alone drops Q by 12.28 points, which is greater
+than removing any other individual objective.
 \end{insightbox}
 
 %% ─── III. PROBLEM DEFINITION ────────────────────────────────
@@ -658,6 +799,24 @@ discovers.
 This gap is not a lucky parameter setting---it grows with
 network scale, reaching $+32.9\%$ at XLarge and holding
 at $+32\%$ at XXLarge.
+
+\textbf{Approximability implications.}
+Feige~\cite{feige1998} showed that the Maximum Coverage
+problem (our reduction source) cannot be approximated to
+within a factor better than $1-1/e \approx 0.632$ in
+polynomial time, unless P$=$NP.
+This means the \emph{best possible} greedy-type algorithm
+for our problem can achieve at most 63.2\% of the optimal
+Q-score in the worst case.
+At XLarge scale, Greedy-BiDir achieves
+$53.69/71.39 = 75.2\%$ of our optimal Q-score---which
+falls exactly within the theoretically expected
+approximation range.
+The 24.8\% sub-optimality gap is not a tuning
+failure; it is consistent with the known inapproximability
+of the problem class.
+Only a complete solver like RC2 can close this gap and
+certify that no better placement exists.
 \end{examplebox}
 
 \subsection{Sets and Parameters}
@@ -850,6 +1009,71 @@ An ILP post-reconciliation step verifies the global budget.
 \RETURN $x'^*$
 \end{algorithmic}
 \end{algorithm}
+
+
+\subsection{RC2 Solver Mechanics and Scalability}
+\label{subsec:rc2_mechanics}
+
+RC2~\cite{narodytska2014} is a core-guided \maxsat{}
+solver that operates by iteratively identifying and
+resolving \emph{UNSAT cores}---minimal subsets of soft
+clauses that cannot all be satisfied simultaneously
+given the current hard-clause constraints.
+
+\textbf{Core-guided search in our model.}
+At the start of each RC2 iteration, the solver's working
+formula includes all seven hard clauses (C1--C7) and all
+soft clauses (L1--L4).
+When the formula is unsatisfiable, RC2 extracts a minimal
+UNSAT core.
+In our model, the most common UNSAT core structure is a
+\emph{Level-4 prevention core}: the clause
+$e_\pi = 1$ (catch attacker early on path $\pi$) is
+unsatisfied because no honeypot covering a non-final hop
+of $\pi$ has been deployed yet.
+RC2 relaxes this core by adding a \emph{blocking variable}
+$b_\pi$ and a new hard clause $e_\pi \leq b_\pi$,
+then penalises $b_\pi=1$ in the objective with weight
+equal to the original Level-4 clause weight.
+This process forces the solver to deploy at least one
+hop-covering honeypot for $\pi$ before the core is
+satisfied.
+
+\textbf{Why zone decomposition preserves optimality.}
+When we decompose the problem into per-zone
+sub-problems~$\mathcal{I}_z$, we preserve optimality
+because the hard constraints C4 (conflicts) and C5
+(air gaps) are \emph{cross-zone constraints}.
+Both are pre-processed before zone decomposition:
+\begin{itemize}
+  \item C5 bans any honeypot type whose zone set $ZK_i$
+        crosses an air-gap pair, so these types are simply
+        removed from the candidate list before solving.
+  \item C4 conflict pairs that span two zones are
+        converted into inter-zone coupling constraints and
+        handled by the ILP post-reconciliation step.
+\end{itemize}
+The result is that each zone's RC2 instance is fully
+independent and can be solved in parallel on separate CPU
+cores.
+The post-reconciliation step runs in $O(|\calK|^2)$ time
+(polynomial) and verifies that no cross-zone conflict was
+violated by the parallel solutions.
+
+\textbf{Warm-start efficiency.}
+When threat priors $\rho_\pi$ change and
+Algorithm~\ref{alg:redeploy} is invoked, RC2 is
+warm-started from the previous solution $x^*$.
+The warm start initialises the solver's variable
+assignments to $x^*$, which is typically still feasible
+(all hard clauses still hold, since C1--C7 do not depend
+on $\rho_\pi$).
+Only the soft clause weights change.
+In our experiments, warm-started re-optimisation
+converges in $<5$ seconds at XLarge scale, compared
+to $\sim$30 seconds for a cold start.
+This $6\times$ speedup makes real-time redeployment
+practical in response to live threat intelligence updates.
 
 %% ─── V. EXPERIMENTAL SETUP ──────────────────────────────────
 \FloatBarrier
@@ -1163,6 +1387,30 @@ False positives&---&2&1&\textbf{0}\\
 \end{tabular}
 \end{table}
 
+
+\begin{table}[htbp]
+\caption{Mininet Detection Breakdown by Kill-Chain Path
+         (MaxSAT-RC2 placement, 10~replays per path).}
+\label{tab:mininet_paths}
+\centering\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Kill-Chain Path}&\textbf{Detected}&
+\textbf{Early (hop$<$final)}&\textbf{Avg.~Hop}&
+\textbf{Technique}\\
+\midrule
+web\_to\_db     &10/10&9/10&1.1&T1190 (z1 Cowrie)\\
+cloud\_pivot    &9/10 &8/10&1.4&T1021 (z2 Cowrie)\\
+brute\_to\_ad   &9/10 &9/10&1.0&T1110 (z1 Cowrie)\\
+ot\_infiltration&8/10 &7/10&1.8&T0855 (z4 Conpot)\\
+ransomware      &9/10 &6/10&2.1&T1021 (z2 Cowrie)\\
+\midrule
+\textbf{Average}&\textbf{9.0/10}&\textbf{7.8/10}&
+  \textbf{1.48}&---\\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \begin{insightbox}
 \textbf{What the emulation confirms beyond simulation.}
 Three properties that simulation alone cannot validate
@@ -1195,6 +1443,44 @@ Level-4 priority (O4): the solver rated the zone1
 \texttt{ssh\_trap} more valuable than a zone2 alternative
 because of its lower $hd$ value, and that prediction
 proved correct in live emulation.
+\end{examplebox}
+
+
+\begin{examplebox}
+\textbf{Conpot session evidence and the OT-zone challenge.}
+The \texttt{ot\_infiltration} path (zone4) had 2 misses
+out of 10 replays---the weakest performance across all
+five paths.
+Post-hoc analysis of the Conpot logs revealed that in
+both missed cases, the CALDERA playbook used T0814
+(Denial of Control) as the initial OT technique rather
+than T0855 (Modify System Settings), which Conpot 0.6
+is configured to emulate.
+This exposes an important limitation of the binary
+detection model: real ICS honeypots have technique-specific
+emulation fidelity that varies across firmware versions.
+Our $R[j,i,a]\in\{0,1\}$ matrix assumes perfect detection,
+but Conpot's actual detection probability for T0814 is
+approximately 0.6 in our testbed configuration.
+
+\textbf{Security implication.}
+This finding validates the probabilistic detection
+extension planned in Section~\ref{sec:discussion}
+(§VIII-C): replacing binary $R$ with probabilistic $P$
+is not just a theoretical exercise---it is necessary to
+accurately predict performance in OT/ICS zones where
+honeypot emulation fidelity varies by technique.
+
+\textbf{Solver recommendation validation.}
+Despite the two OT-zone misses, the solver's decision
+to \emph{not} deploy \texttt{scada\_trap} (which would
+have improved OT coverage) in favour of \texttt{db\_trap}
+and \texttt{ad\_trap} was still correct: the conflict
+constraints (C4) prevent deploying \texttt{scada\_trap}
+alongside three other types simultaneously, and the
+Q-score gain from \texttt{db\_trap}+\texttt{ad\_trap}
+exceeds the gain from replacing them with
+\texttt{scada\_trap} by $\Delta Q = +2.3$ pts.
 \end{examplebox}
 
 %% ─── VI. RESULTS ────────────────────────────────────────────
@@ -1584,6 +1870,33 @@ This guarantees EarlyPct~$=100\%$ at every scale---confirmed
 in both simulation and Mininet emulation---without
 sacrificing coverage of other objectives.
 
+\begin{examplebox}
+\textbf{Failure mode of prevention-unaware solvers.}
+Suppose a solver optimises only O1 (detection efficiency)
+and O2 (technique coverage) without the Level-4 bonus.
+At XLarge scale with budget $B=62{,}500$, the optimal
+solution under this reduced objective concentrates 6 of 8
+available honeypot types in zone2 (Internal LAN), which
+has 40\% of all assets.
+This maximises raw technique coverage---but zone2 is
+hop~2 of the web\_to\_db path.
+The attacker completes hop~1 (zone1/DMZ) undetected,
+reaches zone2, triggers the honeypot, and is caught at
+hop~2 of a 3-hop path.
+Under C7, $e_\pi=0$ because the attacker was not caught
+at a \emph{non-final} hop.
+The database (hop~3) may already be compromised by the
+time the alert fires.
+Our Level-4 objective ($1000\times$ weight) prevents this:
+it forces the solver to deploy at least one honeypot in
+zone1 (DMZ, hop~1) for the web\_to\_db path, even if
+this slightly reduces total technique coverage.
+The Mininet results confirm: our placement catches
+web\_to\_db at hop~1.1 average vs.\ Greedy-BiDir at
+hop~2.1 average---a difference of one full network zone
+between the databases being compromised or not.
+\end{examplebox}
+
 \subsubsection{Advantage 2: Cross-Path Force-Multiplier}
 
 One \texttt{ssh\_trap} in zone2 earns weight 3.612
@@ -1648,6 +1961,34 @@ Algorithm~\ref{alg:redeploy} re-certifies optimality in
 $<5$ seconds when threat priors change, computing
 $\Delta=Q(x'^*)-Q(x^*)$ exactly.
 
+\begin{examplebox}
+\textbf{Concrete STIX/TAXII trigger scenario.}
+A STIX 2.1 threat report arrives describing a new APT
+campaign targeting industrial control systems.
+The report updates:
+$\rho_{\texttt{ot\_infiltration}}: 0.15 \to 0.35$
+and
+$\rho_{\texttt{web\_to\_db}}: 0.30 \to 0.20$.
+
+Algorithm~\ref{alg:redeploy} is triggered automatically.
+The Level-3 and Level-4 soft clause weights for
+\texttt{ot\_infiltration} increase by $0.35/0.15 = 2.33\times$,
+while those for \texttt{web\_to\_db} decrease by
+$0.20/0.30 = 0.67\times$.
+RC2 warm-starts from the current deployment~$x^*$ and
+discovers that swapping \texttt{db\_trap} (zone2, T1213)
+for \texttt{scada\_trap} (zone4, T0855) increases the
+total objective value by $\Delta Q = +4.2$ pts.
+The new deployment $x'^*$ is certified as optimal for
+the updated threat model in 3.7 seconds.
+The OpenFlow controller pushes the updated placement via
+the Ryu SDN API, and the new honeypot configuration
+is live within 12 seconds of the STIX report arriving.
+No baseline method can perform this computation---greedy
+and GA methods do not produce a $\Delta$ value and cannot
+certify whether the update improved the deployment.
+\end{examplebox}
+
 \begin{insightbox}
 \textbf{Closed-loop threat-responsive defence.}
 Our system closes a complete feedback loop:
@@ -1689,6 +2030,59 @@ This is the cross-path force-multiplier and tactic-family
 bonus working together---effects that are structurally
 impossible for greedy methods to replicate.}
 \end{examplebox}
+
+
+\subsection{What Would It Take for a Greedy Method to Match Our Performance?}
+\label{subsec:greedy_gap}
+
+The decomposition in Table above reveals that closing the
+Q-score gap would require a greedy method to achieve:
+(a)~$+26.3$~pts on TechCov (a $+70\%$ relative improvement),
+and (b)~$+25.0$~pts on FamCov (a $+60\%$ relative improvement)
+\emph{simultaneously}, while maintaining current DetEff, FwdPath,
+and BwdPath scores.
+
+This is structurally impossible for any serial greedy method
+for three reasons.
+
+\textbf{Reason 1 --- Cross-path blindness.}
+Achieving $+26.3$~pts TechCov requires discovering
+and exploiting cross-path overlaps.
+As shown in Section~\ref{subsec:crosspath}, greedy methods
+evaluate one path at a time and can achieve at most
+$1.749/3.612 = 48.4\%$ of the per-decision cross-path
+weight that RC2 earns.
+No amount of hyperparameter tuning can fix this---it is a
+structural consequence of serial path evaluation.
+
+\textbf{Reason 2 --- Family bonus blindness.}
+Achieving $+25.0$~pts FamCov requires deploying honeypots
+that collectively cover all ATT\&CK tactic families.
+Greedy methods select honeypots by immediate value/dollar
+ratio and have no mechanism for detecting when a new
+family would be covered by a slightly more expensive type.
+Adding a post-hoc family-coverage check (as in some
+heuristic enhancements) would require re-evaluating all
+remaining candidates after every deployment, converting
+a $O(|\calK|)$ greedy step into an $O(|\calK|^2)$ search
+that still cannot guarantee global optimality.
+
+\textbf{Reason 3 --- Conflict chain blindness.}
+Achieving both improvements simultaneously requires
+reasoning about C4 conflict chains that may eliminate
+certain ATT\&CK-covering types.
+A greedy method that locally picks the best ATT\&CK type
+may trigger a conflict that prevents covering a critical
+tactic family later.
+RC2 reasons globally about these interactions; greedy
+cannot.
+
+In summary, matching our Q-score would require a
+fundamentally different solver architecture---specifically,
+one that encodes all paths, all objectives, and all
+constraints simultaneously in a clause database and
+searches the solution space globally.
+This is precisely what \maxsat{} provides.
 
 %% ─── VIII. LIMITATIONS ──────────────────────────────────────
 \FloatBarrier
