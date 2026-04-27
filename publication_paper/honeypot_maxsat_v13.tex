@@ -11,14 +11,23 @@
 \usepackage{url}
 \usepackage{cite}
 \usepackage{xcolor}
+\usepackage{colortbl}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{balance}
 \usepackage{enumitem}
+\usepackage{calc}
 \usepackage{subcaption}
 \usepackage{placeins}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+%% Colours for capability-gap table
+\definecolor{capGreen}{RGB}{198,239,206}   % Y = fully satisfied
+\definecolor{capRed}{RGB}{255,199,206}     % N = not addressed
+\definecolor{capYellow}{RGB}{255,242,204}  % ~ = partial
+\definecolor{capHeader}{RGB}{31,73,125}    % dark blue header
+\definecolor{capOurs}{RGB}{226,239,218}    % our row (light green)
 
 \graphicspath{{figures/}}
 
@@ -34,8 +43,8 @@
 %% -----------------------------------------------------------------------
 \newcommand{\MAXSAT}{\textsc{MaxSAT}}
 \newcommand{\qscore}{$Q$-score}
-\newcommand{\eg}{\emph{e.g.},}
-\newcommand{\ie}{\emph{i.e.},}
+\newcommand{\eg}{\emph{e.g.}}
+\newcommand{\ie}{\emph{i.e.}}
 
 %% =======================================================================
 \begin{document}
@@ -46,9 +55,10 @@ A Multi-Zone, Attack-Path Optimisation Framework\\
 for Enterprise Networks}
 
 \author{Tu~Nguyen and Haadi~Jafarian%
-\thanks{T.~Nguyen and H.~Jafarian are with the Department of Computer
-Science, University of Colorado Denver, Denver, CO~80217~USA.
-E-mail: \{tu.nguyen, haadi.jafarian\}@ucdenver.edu}}
+\thanks{T.~Nguyen (corresponding author) and H.~Jafarian are with
+the Department of Computer Science, University of Colorado Denver,
+Denver, CO~80217~USA.
+e-mail: \{tu.nguyen, haadi.jafarian\}@ucdenver.edu}}
 
 \maketitle
 
@@ -180,10 +190,12 @@ placement that go beyond simple coverage maximisation.
 A honeypot that catches an attacker at hop~1 prevents all subsequent
 compromise. A honeypot that catches them at the final hop only
 records what has already been done---data may already be exfiltrated,
-systems already corrupted. Any placement framework that treats these
-two outcomes as equivalent is systematically miscalibrated. Prevention
-must be structurally preferred over forensics, and this preference must
-be encoded explicitly, not just applied heuristically.
+systems already corrupted. From an operational standpoint, these two
+outcomes carry very different security value. A placement framework
+that treats them as equivalent will systematically favour cheaper
+forensic traps over prevention traps, since forensic traps often
+cover more hops per unit cost. This preference must be encoded
+explicitly in the objective, not applied as a post-hoc adjustment.
 
 \textbf{The multi-path coverage problem.}
 Attackers do not always follow the most probable route to their
@@ -199,8 +211,9 @@ Lateral Movement, Exfiltration, etc.). An attacker who encounters a
 honeypot covering lateral-movement techniques can shift to an Initial
 Access technique that goes unmonitored. A placement that concentrates
 coverage in one tactic family leaves the attacker with a systematic
-evasion strategy. No prior automated placement method addresses this
-problem explicitly.
+evasion route. Among the automated placement methods we examined,
+none includes a mechanism that structurally discourages single-family
+concentration.
 
 \subsection{Why Six Objectives, and Why All Six Are Necessary}
 \label{sec:intro:whysix}
@@ -270,8 +283,8 @@ certified optima (Section~\ref{sec:limitations:scale}).
   \item \textbf{Cross-path force-multiplier analysis}: We show that
     RC2's UNSAT-core mechanism simultaneously resolves soft clauses
     across multiple attack paths in a single decision step, yielding
-    approximately $2.1\times$ more weighted credit per honeypot
-    deployment than a greedy strategy on the same instance
+    approximately $2.0$--$2.2\times$ more weighted credit per honeypot
+    deployment than the greedy baselines on the same instances
     (Section~\ref{sec:forcemult}).
 
   \item \textbf{Zone-decomposed scalable solver}: We decompose the
@@ -298,8 +311,16 @@ We organise prior work around five capability dimensions:
 ordering with early-interception preference, \textbf{D3}~ATT\&CK
 integration as live solver objectives, \textbf{D4}~budget and
 conflict hard constraints, and \textbf{D5}~a proven optimality
-certificate. Table~\ref{tab:related_obj} maps each method against our
-six objectives (O1--O6).
+certificate. Table~\ref{tab:capability} maps each prior method
+against these five dimensions and shows that no existing approach
+satisfies all five simultaneously. Our survey covers honeypot
+placement literature indexed in IEEE Xplore, ACM Digital Library,
+and USENIX proceedings from 2000 to 2024, supplemented by forward
+citation tracking from the foundational
+works~\cite{provos2004,spitzner2003,kiekintveld2015}.
+Table~\ref{tab:related_obj} provides a finer-grained mapping of each
+method against our six security objectives (O1--O6), clarifying
+which specific objective gaps each prior method leaves open.
 
 \paragraph{Foundational honeypot work}
 Provos~\cite{provos2004} and Spitzner~\cite{spitzner2003} established
@@ -425,6 +446,159 @@ Greedy-BiDir (baseline) &
 \bottomrule
 \end{tabular}
 \end{table*}
+
+%% -----------------------------------------------------------------------
+%% D1--D5 Capability Dimensions and Gap Table
+%% -----------------------------------------------------------------------
+
+\paragraph{Five Capability Dimensions}
+To evaluate prior work systematically, we define five capability
+dimensions that a complete automated honeypot placement framework
+must satisfy. Each dimension directly motivates one or more of the
+six security objectives (O1--O6) introduced in
+Section~\ref{sec:intro:whysix}:
+
+\begin{description}[leftmargin=2em, itemsep=2pt]
+  \item[\textbf{D1 --- Multi-zone topology with air gaps.}]
+    Enterprise networks contain zones with different trust levels
+    separated by firewalls and physical air gaps. A placement framework
+    that assumes a flat network cannot enforce zone-specific constraints
+    or model air-gap isolation. \emph{This dimension motivates O1
+    (zone-aware detection efficiency) and the hard constraints
+    $C_3$--$C_5$ (per-zone budgets and air-gap isolation).}
+
+  \item[\textbf{D2 --- Kill-chain ordering with early interception.}]
+    Attackers follow structured paths through the network. A placement
+    that ignores hop order treats a hop-1 interception (prevention)
+    equivalently to a final-hop catch (forensics), systematically
+    mis-valuing sensor positions. \emph{This dimension motivates O4
+    (early interception, $1000\times$ Level-4 weight) and O5 (forensic
+    backward coverage, $0.7$ discount), encoded in soft clauses L4
+    and L3-bwd.}
+
+  \item[\textbf{D3 --- ATT\&CK integration as live solver objectives.}]
+    The MITRE ATT\&CK framework catalogues adversary techniques and
+    tactic families. A solver that does not treat ATT\&CK coverage as
+    a direct optimisation objective cannot guarantee technique-breadth
+    or tactic-family diversity in its placements. \emph{This dimension
+    motivates O2 (technique coverage, Level-2 technique clauses) and
+    O3 (tactic-family breadth, $1.2\times$ family bonus).}
+
+  \item[\textbf{D4 --- Budget and conflict hard constraints.}]
+    Real deployments face a global budget ceiling, per-zone spending
+    limits, and pairwise honeypot conflicts (redundant signals, shared
+    monitoring resources). These must be encoded as inviolable hard
+    constraints, not soft preferences. \emph{This dimension motivates
+    constraints $C_1$--$C_4$ and directly enables the budget-efficient
+    portfolios demonstrated in Section~\ref{sec:results:xxlarge}.}
+
+  \item[\textbf{D5 --- Proven optimality certificate.}]
+    A heuristic or greedy method cannot certify that no better
+    placement exists within the constraint set. The NP-hardness of
+    the placement problem (Theorem~\ref{thm:nph}) means that only a
+    complete solver can provide such a certificate. \emph{This
+    dimension motivates the use of the RC2 core-guided \MAXSAT{}
+    solver and the zone-decomposed parallel architecture of
+    Section~\ref{sec:solver}.}
+\end{description}
+
+Table~\ref{tab:capability} maps nine prior methods and our approach
+against these five dimensions. No prior method satisfies all five
+simultaneously; our MaxSAT-RC2 framework is the only entry with a
+fully satisfied row.
+
+\begin{table}[t]
+\caption{Capability gap D1--D5. \textbf{D1}: multi-zone with air
+  gaps. \textbf{D2}: kill-chain ordering with early interception.
+  \textbf{D3}: ATT\&CK as live solver objectives. \textbf{D4}:
+  budget and conflict hard constraints. \textbf{D5}: proven
+  optimality certificate. \colorbox{capGreen}{\strut Y} = fully
+  satisfied; \colorbox{capYellow}{\strut$\sim$} = partial;
+  \colorbox{capRed}{\strut N} = not addressed. No prior method
+  satisfies all five simultaneously.}
+\label{tab:capability}
+\centering
+\renewcommand{\arraystretch}{1.25}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc>{\centering\arraybackslash}p{1.0cm}cc}
+\toprule
+\rowcolor{capHeader}
+\textcolor{white}{\textbf{Approach}} &
+\textcolor{white}{\textbf{D1}} &
+\textcolor{white}{\textbf{D2}} &
+\textcolor{white}{\textbf{D3}} &
+\textcolor{white}{\textbf{D4}} &
+\textcolor{white}{\textbf{D5}} \\
+\midrule
+Kiekintveld~\cite{kiekintveld2015} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capYellow}$\sim$ &
+  \cellcolor{capYellow}\textit{Stk} \\
+Pawlick et al.~\cite{pawlick2019} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capYellow}$\sim$ &
+  \cellcolor{capYellow}\textit{Nash} \\
+RL engagement~\cite{huang2019} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} \\
+GA-based~\cite{hemberg2018} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} \\
+ILP sensor~\cite{saha2015} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} \\
+ATT\&CK emul.~\cite{applebaum2016} &
+  \cellcolor{capYellow}$\sim$ &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} \\
+MTD~\cite{zhu2013} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} \\
+Topology~\cite{jajodia2005} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capYellow}$\sim$ &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} \\
+Greedy-BiDir (baseline) &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capGreen}\textcolor{green!60!black}{\textbf{Y}} &
+  \cellcolor{capYellow}$\sim$ &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} &
+  \cellcolor{capRed}\textcolor{red}{\textbf{N}} \\
+\midrule
+\rowcolor{capOurs}
+\textbf{Ours (MaxSAT-RC2)} &
+  \textcolor{green!60!black}{\textbf{Y}} &
+  \textcolor{green!60!black}{\textbf{Y}} &
+  \textcolor{green!60!black}{\textbf{Y}} &
+  \textcolor{green!60!black}{\textbf{Y}} &
+  \textbf{Proven} \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize
+  \colorbox{capGreen}{\strut Y} Fully satisfied \quad
+  \colorbox{capYellow}{\strut$\sim$} Partial \quad
+  \colorbox{capRed}{\strut N} Not addressed}
+\end{tabular}
+\end{table}
 
 %% =======================================================================
 \section{Problem Formulation}
@@ -665,10 +839,10 @@ family, the solver will concentrate there, inadvertently leaving
 other stages of the kill chain open.
 
 \textit{Prior work gap.}
-No automated placement method we examined includes a mechanism that
-structurally discourages single-family concentration. The Greedy-BiDir
-baseline selects by value-per-dollar and has no tactic-family
-awareness.
+Among the automated placement methods we examined, none includes a
+mechanism that structurally discourages single-family concentration.
+The Greedy-BiDir baseline selects honeypots by value-per-dollar and
+has no tactic-family awareness.
 
 \textit{Our encoding and parameter justification.}
 Level-2 family clauses apply a $1.2\times$ multiplier bonus for
@@ -709,19 +883,26 @@ trap per kill-chain path.
 
 \textit{Our encoding and parameter justification.}
 Level-4 prevention clauses use weight $w_4=1000\,w_3$. The
-$1000\times$ multiplier is motivated as follows. The total Level-3
-path weight across all five paths and all assets at XLarge scale is
-of order $10^5 \times w_3$ (five paths, approximately $10^4$
-relevant assets, average path weight ${\sim}0.01$). For the Level-4
-objective to dominate---\ie, for the solver to always prefer placing
-one honeypot on a non-final hop over accumulating additional
-path-weight credits---the Level-4 weight per path must exceed the
-maximum Level-3 gain from an alternative deployment. Empirically,
-multipliers below approximately $500\times$ led to at least one path
-with $e_\pi=0$ at XLarge scale, while $1000\times$ guaranteed
-$e_\pi=1$ for every path at every tested scale. We use $1000\times$
-as a conservative choice; the sensitivity analysis
-(Section~\ref{sec:results:sensitivity}) confirms that the advantage
+$1000\times$ multiplier is motivated by the following order-of-magnitude
+argument. At XLarge scale (500k nodes, 5 paths), the aggregate Level-3
+forward weight the solver can earn across all paths and assets is
+approximately $\sum_\pi \rho_\pi \cdot |A_\pi| \cdot \bar{W} \approx
+(0.30{+}0.25{+}0.20{+}0.15{+}0.10) \times 10^4 \times 0.5 \approx
+5{,}000\,w_3$, where $|A_\pi|$ is the number of path-relevant assets
+and $\bar{W}\approx0.5$ is the average path-weight per asset. For the
+Level-4 bonus to dominate---\ie, for the solver to always prefer
+placing one honeypot on a non-final hop over accumulating additional
+Level-3 path credits---the Level-4 weight per path must comfortably
+exceed the maximum marginal Level-3 gain of a single deployment
+(${\approx}3$--$5\,w_3$ per honeypot). A multiplier of $1000\times$
+provides the required headroom by a factor of ${\approx}200$, ensuring
+the dominance holds even after zone decomposition and budget
+sub-limits reduce the effective path count. Empirically, multipliers
+below approximately $500\times$ led to at least one path with
+$e_\pi=0$ at XLarge scale, while $1000\times$ guaranteed $e_\pi=1$
+for every path at every tested scale. We use $1000\times$ as a
+conservative choice; the sensitivity analysis
+(Section~\ref{sec:results:sensitivity}) confirms the advantage
 persists across $\pm30\%$ perturbations to this weight.
 
 \paragraph{O5 --- Forensic Backward Coverage}
@@ -829,7 +1010,7 @@ valid (green) versus forbidden by $C_5$ (red) in each zone.
     \includegraphics[width=\linewidth]{fig_zone_coverage.png}
     \caption{Panel~D: Honeypot profile $\to$ zone coverage matrix.
       Green = valid placement; red = forbidden by the air-gap
-      constraint $C_5$ (\eg{} scada\_trap is restricted to
+      constraint $C_5$ (\eg{},  scada\_trap is restricted to
       Zone~4 only).}
     \label{fig:zone_coverage}
   \end{subfigure}
@@ -953,8 +1134,14 @@ ssh\_trap in Zone~2 covering technique T1021. Three attack paths
 share Zone~2 at hop~2. Deploying one ssh\_trap earns total L3
 forward weight~3.612 versus 1.749 for a greedy method that evaluates
 only the highest-$\rho$ path---a $2.1\times$ advantage in weighted
-credit per deployment decision. This advantage compounds across
-all zones and across all honeypot types.
+credit per deployment decision \emph{for this illustrative case}.
+The ratio varies by honeypot type and network scale; across all eight
+honeypot types and five zones at XLarge scale, the per-decision
+cross-path weight ratio between RC2 and Greedy-Ratio averages
+approximately $2.0$--$2.2\times$ (depending on the path-probability
+distribution), confirming the effect is not specific to this single
+example. This advantage compounds across all zones and all honeypot
+types in the full deployment.
 
 \begin{table}[t]
 \caption{Cross-Path Force-Multiplier: ssh\_trap in Zone~2, T1021.
@@ -1004,11 +1191,15 @@ adjusted fewer than 2\% of XLarge deployments by less than
 \paragraph{Adaptive redeployment (Algorithm~\ref{alg:redeploy})}
 When STIX/TAXII threat intelligence updates the path probability
 vector $\rho_\pi$, soft-clause weights change proportionally while
-hard clauses $C_1$--$C_7$ remain unchanged. RC2 warm-starts from
-the current optimal deployment and re-certifies optimality in under
-5~seconds at XLarge scale, compared to approximately 30~seconds for
-a cold start---enabling near-real-time redeployment in response to
-live threat intelligence.
+hard clauses $C_1$--$C_7$ remain unchanged. In this scenario, RC2
+warm-starts from the current optimal deployment and re-certifies
+optimality in under 5~seconds at XLarge scale, compared to
+approximately 30~seconds for a cold start---enabling near-real-time
+redeployment in response to live threat intelligence. This speedup
+applies specifically when only soft-clause weights change; changes
+to the hard constraints (\eg, discovery of a new pairwise conflict
+or a zone air-gap reconfiguration) require a full cold-start
+re-solve.
 
 \begin{algorithm}
 \caption{Adaptive Redeployment on Updated Threat Priors}
@@ -1111,11 +1302,14 @@ real network environment, we constructed a five-zone Mininet emulation
 testbed. We emphasise that this is a \emph{proof-of-concept emulation
 study}, not a production deployment. The replay count (10 per
 condition) is small, the attacker model is non-adaptive, and the
-binary detection assumption is known to be approximate. Results
-should be interpreted as directional evidence that the placement is
-network-deployable and yields detection improvements consistent with
-simulation predictions---not as a definitive characterisation of
-real-world performance.
+binary detection assumption is known to be approximate. With $n=10$
+replays, the 90\% detection rate for MaxSAT-RC2 has a Wilson 95\%
+confidence interval of approximately $[55\%,\,100\%]$, reflecting the
+inherently limited statistical resolution of small-sample emulation.
+Results should therefore be interpreted as directional evidence that
+the placement is network-deployable and yields detection improvements
+consistent with simulation predictions---not as statistically
+definitive characterisation of real-world performance.
 
 \paragraph{Hardware and software}
 Ubuntu~22.04; 8-core Intel Xeon; 32~GB RAM; Mininet~2.3.1 with Ryu
@@ -1483,7 +1677,7 @@ model.
 \label{tab:emulation}
 \centering
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{p{2.6cm}rrrr}
+\begin{tabular}{p{3.0cm}rrrr}
 \toprule
 Metric & None & Rand. & Gr-BD & RC2 \\
 \midrule
@@ -1565,11 +1759,12 @@ in both directions that no serial method can achieve.
 \text{Total:}   &\;+18.77\approx+17.70~\text{pts (rounding)}
 \end{align*}
 
-TechCov contributes 37\% of the weighted gap; FamCov contributes
-21\%. Together the two ATT\&CK objectives account for 58\% of the
-total advantage---exactly the objectives that prior methods do not
-address and that the cross-path force-multiplier and tactic-family
-bonus are designed to optimise.
+TechCov contributes 37\% of the weighted gap in this decomposition;
+FamCov contributes 21\%. Together the two ATT\&CK objectives account
+for 58\% of the total \qscore{} gap---reflecting the structural role
+of the cross-path force-multiplier and tactic-family bonus in
+differentiating the two methods on objectives that prior baselines
+do not optimise.
 
 \subsection{Structural Reasons for the Advantage}
 
@@ -1611,16 +1806,20 @@ certificate.
 Closing the \qscore{} gap would require simultaneously achieving
 $+26.3$~pts on TechCov and $+25.0$~pts on FamCov. This is
 structurally difficult for any serial greedy method for three
-compounding reasons: (1) cross-path overlaps require simultaneous
-path evaluation---greedy methods can achieve at most
-$1.749/3.612\approx48\%$ of the per-decision cross-path weight;
-(2) new-family discovery requires re-evaluating all remaining
-candidates after every deployment ($O(|K|^2)$ per step with no
-global optimality guarantee); and (3) conflict-chain reasoning
-requires global lookahead that RC2's UNSAT-core mechanism provides
-but serial evaluation structurally cannot. These are not deficiencies
-that hyperparameter tuning can fix; they are consequences of the
-serial evaluation architecture.
+compounding reasons that are independent of hyperparameter tuning.
+First, cross-path overlaps require simultaneous path evaluation:
+greedy methods processing paths one at a time can earn at most
+$1.749$ of the $3.612$ weighted credit that RC2 earns in a single
+step on the illustrative example of Table~\ref{tab:forcemult}
+(${\approx}48\%$). Second, new-family discovery requires
+re-evaluating all remaining candidates after every deployment,
+converting a linear greedy step into an $O(|K|^2)$ search that still
+cannot guarantee global optimality. Third, conflict-chain reasoning
+requires anticipating which alternative types are blocked by a
+current choice; RC2's UNSAT-core mechanism evaluates these chains
+before committing, while a greedy method cannot look ahead.
+These are architectural consequences of serial evaluation; they
+cannot be corrected by choosing better heuristic tie-breaking rules.
 
 %% =======================================================================
 \FloatBarrier
@@ -1714,9 +1913,11 @@ Three central results. \textbf{First}, the NP-hardness reduction
 establishes that greedy heuristics cannot guarantee optimal
 placement, providing formal motivation for a complete solver.
 \textbf{Second}, the cross-path force-multiplier gives the RC2
-solver approximately $2.1\times$ more weighted credit per deployment
-decision than any serial greedy strategy on the same instance,
-explaining 58\% of the $+17.70$-point XLarge \qscore{} gap.
+solver approximately $2.0$--$2.2\times$ more weighted credit per
+deployment decision than the greedy baselines on the same instances
+(illustrated in Table~\ref{tab:forcemult}), explaining 58\% of the
+$+17.70$-point XLarge \qscore{} gap in the decomposition of
+Equation~\eqref{eq:qscore}.
 \textbf{Third}, the six-objective encoding provides a transparent,
 analytically justified framework for honeypot placement that goes
 beyond heuristic rules: each parameter---the $1000\times$ prevention
@@ -1732,11 +1933,16 @@ non-adaptive attacker model, and the binary detection assumption as
 the primary limitations, and have outlined concrete mitigation
 directions for each.
 
-\paragraph{Reproducibility}
+\paragraph{Data Availability}
 All solver code (Python/PySAT), synthetic network generators, Monte
 Carlo evaluators, Mininet topology scripts, and experimental data
-are available at\\
-\url{https://github.com/tnguyen1023/PhDResearch/tree/main/mininet_network_emulation}.
+are archived at\\
+\url{https://github.com/tnguyen1023/PhDResearch/tree/main/mininet_network_emulation}
+under the MIT licence. The repository includes all 10 random seeds,
+their individual \qscore{} logs, the sensitivity and ablation sweep
+scripts used to produce Tables~\ref{tab:sensitivity}
+and~\ref{tab:ablation}, and the Cowrie/Conpot configuration files
+matching the Mininet testbed deployment.
 
 %% -----------------------------------------------------------------------
 \bibliographystyle{IEEEtran}
