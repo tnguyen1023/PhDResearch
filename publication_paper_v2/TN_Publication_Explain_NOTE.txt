@@ -1,0 +1,209 @@
+
+===== Zone-Slot-Time-Persona Threat-Adaptive Honeypot Placement
+
+
+==== Cross-Path Force-Multiplier
+
+This is the most important structural insight in the whole framework. Let me build it up in two steps — first showing why greedy fails, then showing how the UNSAT core resolution discovers the multiplier automatically.
+
+All three paths converge at Zone 2. One ssh_trap there covers all three simultaneously — but a greedy method can't see this because it commits to path 1 before it ever evaluates paths 2 and 3. Here's the interactive comparison that makes the credit arithmetic concrete.
+
+
+2.15×
+Cross-path force-multiplier
+RC2 earns 2.15× more credit per deployment.
+Persona compounding adds 1.60× on top — independent and multiplicative.
+Combined advantage: 3.43× total advantage per deployment
+
+
+Why greedy structurally cannot find this. A greedy algorithm has a commitment problem: it picks the best move for path 1, spends budget, then evaluates path 2 with whatever is left. By the time it reaches path 2, the Zone 2 slot may already be used or the budget is gone. Crucially, the greedy method never asks "which single deployment satisfies the most clauses simultaneously?" — it only ever asks "which deployment is best for the path I'm looking at right now?" The cross-path value is invisible to this question.
+What the UNSAT core is and why it matters. When RC2 runs, it doesn't evaluate paths one at a time. It looks for a minimal set of soft clauses that are all simultaneously unsatisfied — a conflict cluster. In this case, the L3 clauses for web→db, OT infiltration, and brute→AD are all unsatisfied at the same time because no honeypot has been placed in Zone 2 yet. RC2 resolves them together in one step, discovering that a single ssh_trap at Zone 2 satisfies all three. The credit it earns — 0.55 + 0.35 + 0.28 = 1.18 path-weight units (times w₃ times qp) — is collected in one solver move. Greedy would collect only 0.55 units for the same budget.
+Why the two advantages are independent and compound. The cross-path multiplier comes from topology — Zone 2 is literally on all three routes. The persona multiplier comes from the LLM's prior: qp = 0.40 instead of 0.25 means every clause this deployment touches earns 1.6× more credit. These are separate factors in the same product: credit = w₃ · ρπ · qp · (1−u_type) · (1−u_persona). Changing qp doesn't change the topology, and the topology doesn't change qp. So if RC2 earns 2.07× more than greedy from the cross-path effect, and the persona lifts that by 1.6×, the combined advantage is 2.07 × 1.6 = ~3.3× per deployment decision — and this compounds across every zone and every type in the full planning horizon.
+
+
+￼
+
+=======  G. Algorithm 1 — The Adaptive Intelligence Layer
+Algorithm 1 is the bridge between live threat intelligence and the solver. Its original function was to warm-start RC2 when path probabilities ρπ change — recomputing soft-clause weights without touching hard constraints and re-certifying optimality in under 5 seconds.
+The persona extension adds Step 3: updating qₚ from the threat-intel classification. This is where the LLM contribution is most precisely defined. The LLM reads the STIX/TAXII feed and classifies the attacker's motivation — financially motivated, IP-theft focused, destructive, etc. It then adjusts the persona prior vector to reflect which personas are most likely to attract that attacker's attention.
+This is a fundamentally different kind of LLM contribution than "nudging weights." Adjusting qₚ produces an operationally interpretable output: "this month, prioritize Finance_DB and HR_workstation personas." A security operator can read that output, understand it, and override it if domain knowledge warrants. Adjusting anonymous w values produces an opaque vector that requires the operator to trust the LLM without being able to verify its reasoning.
+The core idea here is interpretability by design — the LLM isn't tuning numbers inside the solver, it's producing human-readable operational decisions that feed into the solver. Let me show the full pipeline first, then make the interpretability distinction concrete and interactive.
+
+
+Step 3 is a classification task, not a weight-tuning task. The LLM reads the STIX/TAXII feed and produces a sentence: "this actor is financially motivated, prioritise Finance_DB and HR_workstation." That sentence has a truth value an operator can evaluate against their own threat intelligence. The anonymous weight vector — w₃ changing from 1000 to 1102 — has no truth value a human can evaluate without reverse-engineering the entire objective function.
+The qp output is operationally interpretable. "Finance_DB priority raised to 0.85" means something a security engineer can reason about: does our threat intel agree this actor targets financial systems? Do we have domain knowledge that overrides this? The operator can accept, reject, or selectively adjust individual persona priors. None of that is possible with the weight vector — you can't raise one weight without understanding how all six soft-clause families interact.
+The warm-start property is what makes this fast. Steps 1 and 2 recompute soft-clause weights without touching hard constraints — the feasibility boundary of the problem doesn't change, so RC2 doesn't need to re-solve from scratch. It inherits the previous solution as a starting point and only needs to re-certify optimality given the updated weights. That's why re-certification takes under 5 seconds even for large networks. Step 3 feeds into this same mechanism: qp updates are just another form of soft-clause weight change, so the warm-start speed guarantee holds for persona updates too.
+The audit trail argument. When an operator overrides a qp value, that override is a legible, documented decision: "we set Finance_DB to 0.60 instead of the LLM's 0.85 because our intel suggests this actor has not historically targeted payment systems." That reasoning can be reviewed, challenged, and improved over time. When an operator overrides an anonymous weight vector, the documentation would read "we changed w₃ from 1102 to 1000" — which tells future reviewers nothing about why or whether it was correct.
+
+
+￼
+
+====== H. The Six Objectives and Six Dimensions
+The six objectives (O1–O6) and six dimensions (D1–D6) are not independent features — they are a covering set over the space of attacker evasion strategies.
+Remove any single objective and a distinct evasion channel opens:
+	•	Without O1, the solver deploys in low-traffic zones where no attacker goes
+	•	Without O2, an attacker using uncovered techniques goes undetected
+	•	Without O3, an attacker shifts to an unmonitored tactic family
+	•	Without O4, fast-moving attackers complete the kill chain before detection fires
+	•	Without O5, the solver cannot distinguish prevention from forensics and misprices both
+	•	Without O6, lower-probability paths remain open as escape routes
+The six dimensions map onto the six objectives and show which structural properties of the formulation enforce each objective. D6 (Persona/identity) is new and closes the evasion channel that C5b, C12, and C13 together address: an attacker who fingerprints identities rather than types, bypassing the entire type-rotation defense.
+
+The independence property is the key claim. Each objective closes a channel the others cannot. O1 closes spatial evasion — deploying on real attack routes. O2 closes technique evasion — covering the ATT&CK matrix. O3 closes tactic-family evasion — spanning Initial Access through Exfiltration. O4 closes temporal evasion — the slot-duration attack we explored with C10/C11. O5 closes the prevention/forensics mispricing problem — ensuring the weight hierarchy actually enforces early interception. None of these five close the identity-fingerprinting channel, because they all operate above the level of individual honeypot personas.
+D6 and O6 close a strictly different kind of attack. The original type-rotation constraint C5b prevents an attacker from fingerprinting honeypots by their type — if the defender cycles ssh_trap → rdp_trap → smb_trap, the attacker can't learn "zone 2 always runs ssh_trap." But a sophisticated attacker can fingerprint at a finer level: the identity of a deployment. Finance_DB with a self-signed certificate whose CN always contains "findb-" and whose TCP timestamps follow a predictable pattern is recognisable regardless of what type it runs as. C12 and C13 force persona rotation independently of type rotation, and the dual discovery guard (1−u_type)·(1−u_persona) makes identity discovery as costly as type discovery — complete credit loss, not a partial penalty.
+Why the covering set argument matters for the solver. If any objective were redundant — if O3 were already implied by O1 and O2 together — a resource-constrained solver might satisfy O1 and O2 with high credit while leaving O3 partially satisfied, and the formulation would silently accept that. Because each objective closes a distinct channel with its own clause structure, there is no way to satisfy five objectives and get the sixth for free. The solver must genuinely address all six, or an attacker finds the gap.
+
+￼
+
+
+I. Complexity and Backward Compatibility
+The variable count grows from |K| (original) to |K|·|Z|·τ·|P|. For the XLarge instance this is 8·5·τ·|P| = 40|P|τ. At |P|=5 and τ=4 this is 800 binary variables — trivially small for RC2.
+The NP-hardness is preserved by the same Feige (1998) reduction from Weighted Maximum Coverage: setting |P|=1 recovers the one-zone reduction exactly, and |P|>1 is strictly harder because it adds the persona-conflict clause class C12 which has no analogue in the base reduction.
+The backward compatibility chain is exact:
+	•	|P|=1 removes the persona dimension and recovers x_{i,z,t}
+	•	Adding τ=1 removes the time dimension
+	•	Adding τᵈ=∞ removes rotation pressure
+	•	Adding |ZKᵢ|=1 collapses zones to a single zone
+	•	The result is exactly xᵢ from the original paper
+	•
+This means every result from the original paper — the Q-score comparisons, the force-multiplier table, the NP-hardness theorem — remains valid as a special case of this formulation.
+
+
+====== Hard Constraints
+
+——> GAP and Solution -> For -> C10  The temporal persistence constraints -> alone doesn't stop a single-shot attacker NOT Persistent Attack APT  -> Lateral Movement
+
+——> But -> Yes — C11 directly closes the single-shot gap that C10 leaves open. Here's the key insight:
+C10 controls how many slots are covered. C11 controls how long each dark slot can be. Together they form a two-dimensional squeeze: the attacker needs both a dark slot AND enough time inside it to finish. C11 makes the dark slot duration τᵈ shrink as threat rises — so even if the attacker finds a gap, the window may be too narrow to complete the attack.
+C11 makes the rotation threshold itself dynamic. When STIX/TAXII signals rising threat probability on path π, τᵈ tightens automatically — τᵈ = τᵈ⁰ · (1 − ρπ/ρₘₐˣ). At ρπ = 0.55 with τᵈ⁰ = 3, τᵈ drops to 1.35, meaning the honeypot must rotate approximately every slot. As the threat subsides, τᵈ relaxes and rotation slows, reducing operational cost. This is real-time threat-responsive behavior encoded directly into the constraint structure rather than requiring a human operator to manually adjust rotation schedules.
+
+C10 + C11 together close both dimensions simultaneously — coverage density on one axis, dark window width on the other — leaving the attacker no viable gap in either space.
+
+===== Soft Constraints
+
+The ordering prevention → path coverage → forensics → technique breadth → family breadth → basic detection is baked into the numbers, not into human instructions to the solver.
+
+
+￼
+
+
+Try flipping either discovery guard — notice credit drops to exactly zero regardless of how high qp is or which level you picked. That's the dual guard doing its job.
+Here's the full picture of what each piece encodes:
+The geometric weight structure is the key architectural decision. A ratio of 1000× between adjacent levels means the solver operates in strict priority mode — it cannot trade lower-level credits for higher ones. No number of L1 detections can substitute for one L4 interception. This isn't just a preference; it's a mathematical guarantee. The ordering prevention → path coverage → forensics → technique breadth → family breadth → basic detection is baked into the numbers, not into human instructions to the solver.
+The qp multiplier rewards persona-threat alignment multiplicatively. A honeypot disguised as a Finance_DB when the attacker profile is financially motivated earns more than an identical honeypot with a generic persona. Crucially, qp scales the full clause value — so a high-value L4 interception with a well-matched persona earns more than an L4 interception with a mismatched one. The solver is thus pushed to choose not just where to place honeypots, but what they should pretend to be.
+The dual discovery guards (1 − u_type) · (1 − u_persona) are a product of two binary terms. As soon as either fires (either the honeypot type or its persona identity is discovered), the entire product collapses to zero. This creates continuous pressure throughout the planning horizon to rotate both independently — because the solver knows that any undiscovered honeypot with both flags at zero is earning credit, while a discovered one earns nothing. Discovery on either axis is total loss, not partial.
+
+
+======
+
+The Central Idea
+The original paper asked one question: what honeypot type should be deployed? The answer was a single bit xᵢ ∈ {0,1} per type. This formulation asks four questions simultaneously with one decision variable:
+
+
+x_{i,z,t,p} ∈ {0,1}
+  i = which honeypot type (what)
+  z = which zone          (where)
+  t = which time slot     (when)
+  p = which persona       (as whom)
+Every constraint, every objective, every derived variable exists to either enforce that this four-way decision is operationally valid, or to reward it for contributing to security. Understanding the formulation means understanding why each dimension was necessary and what breaks without it.
+
+A. The Instance Tuple — What the Solver Knows Before It Starts
+The tuple I = (K, T, A, Z, P, G, C, I₂, ⋄, w, cost, B, B₂, dₘ, hᵈ, σ, ρ, iv, GK, τᵈ, τᵈᵖ, Δ, Δₚ, q, ρₘₐˣ) is the complete static description of the problem handed to RC2 before solving begins. It falls into four conceptual groups:
+Network structure — K, T, A, Z, G, C, I₂ describe the topology: what honeypot types exist, what ATT&CK techniques they cover, what assets exist, what zones exist, what kill-chain paths attackers follow, which honeypot pairs conflict, and which zones are physically isolated. This is the map the solver reasons over.
+Economic reality — w, cost, B, B₂ encode budget constraints. cost_{i,z} replaces the scalar cost_i of the original paper because physical appliances cost differently per zone — deploying a SCADA trap in OT costs more than the same trap in a lab zone.
+Attacker intelligence — σ, ρ, iv encode what is known about the attacker. σⱼ is the stealth score of technique tⱼ: high-stealth techniques blend into normal traffic, making them harder to detect through conventional monitoring, so a honeypot covering them is disproportionately valuable. ρπ is the probability an attacker follows path π. ivπ,h is how much it is worth to catch them at hop h of that path.
+Persona-layer additions — P, GK, τᵈ, τᵈᵖ, Δ, Δₚ, q, ρₘₐˣ are all new. They encode the identity dimension: what personas exist, which (servertype, persona) combinations are mimicry-plausible, how long before an attacker fingerprints a type versus an identity, how often rotation is permitted, what the LLM currently believes about attacker motivation, and how threat-responsive rotation should be.
+
+B. Decision Variables — What the Solver Decides
+The primary variable x_{i,z,t,p}
+This is the only thing RC2 actually decides. Everything else is either derived from it or used to score it. Setting x_{i,z,t,p} = 1 means: "deploy honeypot type kᵢ in zone z during slot t, presenting identity p to the network."
+The key insight is that all four dimensions are inseparable in practice. You cannot decide what to deploy without simultaneously deciding where, when, and as whom, because:
+	•	Cost depends on zone (not type alone)
+	•	Detection credit depends on whether the right type is in the right zone at the right slot
+	•	Deception credibility depends on whether the persona is plausible for that zone and asset type
+	•	Rotation decisions depend on how long a specific (type, zone, persona) triple has been visible
+The derived variables
+x_{i,t} — derived as ΣzΣp x_{i,z,t,p} ≥ 1. This collapses the four-dimensional primary variable back to a type-slot pair purely for C4 conflict checking. Two honeypot types that conflict (share monitoring resources, produce redundant signals) cannot both be active in the same slot regardless of zone or persona.
+u_{i,z,t} — type-discovery flag. This encodes the attacker's learning about the honeypot as an infrastructure object. Once the same type has been present in zone z for τᵈ consecutive slots under any persona, the attacker has had enough exposure to identify it as a honeypot by its behavioral signature, port fingerprint, or traffic pattern. The "any persona" clause matters: persona rotation does not reset type exposure, because the underlying service behavior (response timing, banner format, protocol implementation) remains the same regardless of what hostname it uses.
+u_{i,z,t,p} — persona-discovery flag. This is a separate, finer-grained discovery process. The attacker fingerprints the identity — the hostname, the AD account name, the employee profile. If HR_workstation has been at 10.2.x.y for two months, the attacker's reconnaissance notes say "this is a known endpoint." Rotating to DevOps_server resets this flag independently of u_{i,z,t}, because the identity the attacker mapped no longer exists.
+The dual-flag architecture is the key insight. Type discovery and persona discovery are independent processes triggered by different attacker behaviors. A sophisticated attacker does both. The formulation models both and zeroes credit when either fires.
+
+C. Derived Weights — The Value Calculation
+The three weight equations transform raw parameters into the values the solver maximizes.
+Equation (2): w̃ⱼ,ₐ = wⱼ,ₐ × dₘ,ₐ / hᵈ,ₐ
+The 1/hᵈ term is the perimeter-preference mechanism. If an asset is at hop distance 1 from the network entry (i.e., in the DMZ), its detection weight is full. At hop distance 3 (deep in the internal network), its weight is one-third. This encodes the operational truth that catching an attacker at hop 1 prevents all downstream damage, while catching them at hop 3 means they have already traversed two zones. The dₘ,ₐ role multiplier scales further by asset criticality — a database server is worth more than a workstation.
+Equation (3): Wⱼ,ₐ = w̃ⱼ,ₐ × (1 + σⱼ)
+The (1+σⱼ) stealth factor creates asymmetric value for hard-to-detect techniques. T1048 (Exfiltration over Alternative Protocol) has σ ≈ 0.9 because it is nearly invisible to conventional monitoring. A honeypot covering it earns 1.9× the base weight. This makes the solver seek out coverage of stealthy techniques even when they appear in fewer zones — their rarity makes them more valuable, not less.
+Equation (4): PWπ,h,j,a = ρπ × ivπ,h × Wⱼ,ₐ
+This combines path probability, hop interception value, and technique-asset weight into a single path-weight score. It is the currency the objective function maximizes. The persona extension multiplies every use of PW by qₚ, which scales the value proportionally to how relevant the current persona is given the LLM's threat assessment.
+
+D. Hard Constraints — What the Solver Cannot Violate
+C1 — The foundational detection chain
+¬cⱼ,a,t ∨ ⋁ᵢ,ₚ (x_{i,zone(a),t,p} · (1−u_{i,zone(a),t,p}))
+This says: if you claim detection of technique tⱼ on asset a at slot t, there must exist at least one deployed honeypot in the correct zone at that slot whose persona has not been discovered. The clause form means the solver cannot claim detection credit (set cⱼ,a,t = 1) without actually committing to a deployment that supports it. The persona-discovery guard (1−u_{i,zone(a),t,p}) is new: even if the type is undiscovered, a blown persona yields zero credit.
+C4 and C12 — Two levels of conflict prevention
+C4 prevents type conflicts: a web trap and a DNS trap that share monitoring infrastructure cannot both be deployed in the same slot, regardless of zone or persona. This operates at the type level.
+C12 prevents persona conflicts: two different honeypot types cannot wear the same persona in the same zone at the same slot. This operates at the identity level. If ssh_trap and db_trap both present as HR_workstation in the DMZ at month 2, an attacker who sees two "HR workstations" immediately knows at least one is fake. The deception collapses not because the honeypot was detected as a honeypot, but because the identity was detected as duplicated. C12 is structurally identical to C4 but operates one dimension deeper.
+C5 and C5b — Two levels of plausibility enforcement
+C5 enforces physical reachability: a honeypot requiring SSH connectivity cannot be deployed in an air-gapped OT zone regardless of how valuable it would be. This is a hard physical constraint.
+C5b enforces mimicry plausibility: the four-condition J-index checks that (servertype, zone, technique, persona) all belong to the generative knowledge set GK_{i,p}. An ssh_trap wearing Finance_DB persona on a Linux endpoint fails this check because the (servertype=Linux, persona=Finance_DB) pair is not in GK — Linux workstations do not run finance database roles in a plausible enterprise topology. Without C5b, the solver could claim deception credit for deployments that no attacker would actually believe.
+C8, C9, C13 — The three rotation constraints
+These work together to prevent both over-rotation and under-rotation.
+C9 (type-discovery) fires after τᵈ consecutive active slots and is not reset by persona changes. It represents the attacker learning the honeypot's behavioral signature.
+C13 (persona-rotation) fires after τᵈᵖ consecutive slots with the same persona and is reset by switching to a different identity. It represents the attacker learning the hostname, AD account, or network identity.
+C8 (churn limit) bounds the total number of state changes across the planning horizon. Without C8, the solver could rotate every slot — technically avoiding both C9 and C13 — but the operational cost of constant reconfiguration would make the deployment unmanageable. C8 forces the solver to find a rotation schedule that is both evasion-effective and operationally sustainable.
+The interaction: C9 says "you must rotate before the type is discovered." C13 says "you must rotate the persona before the identity is discovered." C8 says "but you cannot rotate too frequently." The solver must find the schedule that satisfies all three simultaneously, which is a genuine combinatorial challenge.
+C10 and C11 — The temporal persistence constraints
+C10 closes the gap-slot vulnerability. A patient attacker who knows a honeypot rotates monthly will simply wait for the unmonitored month and attack then. C10 prevents this by requiring that the critical hop h★ of each path π be covered in at least ⌈ρπ·τ⌉ slots. For a path with probability 0.30 over 4 slots, at least 2 slots must be covered. The attacker cannot rely on a predictable gap.
+C11 makes the rotation threshold itself dynamic. When STIX/TAXII signals rising threat probability on path π, τᵈ tightens automatically — τᵈ = τᵈ⁰ · (1 − ρπ/ρₘₐˣ). At ρπ = 0.55 with τᵈ⁰ = 3, τᵈ drops to 1.35, meaning the honeypot must rotate approximately every slot. As the threat subsides, τᵈ relaxes and rotation slows, reducing operational cost. This is real-time threat-responsive behavior encoded directly into the constraint structure rather than requiring a human operator to manually adjust rotation schedules.
+
+E. Soft Clauses — What the Solver Maximizes
+The six soft-clause families form a strict priority hierarchy through geometric weights: w₄ = 1000w₃ = 100,000w₂ = 1,000,000w₁. This means the solver will always sacrifice any amount of lower-level credit to gain one unit of higher-level credit.
+L4 (Early Interception, w₄): The highest priority. Catching an attacker at a non-final hop earns the maximum interception value for the entire path. The 1000× multiplier ensures the solver always prefers placing one honeypot at hop 1 of a path over accumulating any amount of forensic or technique-coverage credit elsewhere. This encodes the prevention-over-forensics principle as a mathematical guarantee.
+L3-fwd (Path Coverage, w₃): Forward path coverage earns full path-weight credit. The ρπ factor means higher-probability paths earn proportionally more, directing the solver toward paths the attacker is actually likely to use.
+L3-bwd (Forensic Coverage, 0.7w₃): The same clause structure as L3-fwd but discounted to 70% of its value. This encodes the operational reality that forensic evidence gathered at a final hop — after the target has been reached — is valuable for attribution but cannot undo the compromise. The 0.7 factor is calibrated to keep forensic coverage in the objective without allowing it to crowd out prevention.
+L2-tech (Technique Coverage, w₂): Awards a bonus for each distinct ATT&CK technique covered. This creates direct pressure to spread coverage across the technique matrix rather than over-investing in the techniques already covered by the highest-value deployments.
+L2-fam (Tactic-Family Breadth, 1.2w₂): The 1.2× multiplier means that covering a new tactic family is worth more than additional coverage within an already-covered family. This prevents the solver from concentrating all coverage in Lateral Movement while leaving Initial Access and Exfiltration unmonitored.
+L1 (Basic Detection, w₁): The baseline credit for any detection event. This is the floor that ensures even deployments that cannot contribute to path coverage still earn some value.
+The persona extension adds qₚ as a multiplicative factor to every clause and adds dual discovery guards (1−u_type)·(1−u_persona). The qₚ factor means that a deployment wearing a threat-relevant persona (e.g., Finance_DB when the attacker is financially motivated) earns proportionally more credit. The dual guards mean credit immediately drops to zero the moment either discovery flag fires, creating continuous pressure on the solver to maintain both type-rotation and persona-rotation throughout the planning horizon.
+
+F. Cross-Path Force-Multiplier
+This is the mechanism that makes the MAXSAT approach structurally superior to any greedy method. When RC2 encounters an UNSAT core — a minimal set of soft clauses that cannot all be simultaneously satisfied — it resolves them together in a single step.
+A single ssh_trap deployment in Zone 2 resolves L3 clauses for three paths simultaneously (web→db, OT infiltration, brute→AD) because all three paths share Zone 2 at hop 2. The total credit earned in one solver step is 3.612 versus 1.749 for a greedy method that evaluates only the highest-probability path. The 2.1× advantage per deployment decision compounds across all zones and all types.
+The persona extension scales this multiplicatively: if the LLM has set q_p = 0.40 for HR_workstation (up from the default 0.25), every path covered by that deployment earns 0.40/0.25 = 1.6× more credit than at default priors. The cross-path advantage and the persona-prior advantage are independent and compound together.
+Greedy methods structurally cannot discover this because they evaluate paths serially. By the time the greedy method reaches path 2, it has already committed budget to path 1 and cannot retroactively recognize that a different deployment would have covered both.
+
+G. Algorithm 1 — The Adaptive Intelligence Layer
+Algorithm 1 is the bridge between live threat intelligence and the solver. Its original function was to warm-start RC2 when path probabilities ρπ change — recomputing soft-clause weights without touching hard constraints and re-certifying optimality in under 5 seconds.
+The persona extension adds Step 3: updating qₚ from the threat-intel classification. This is where the LLM contribution is most precisely defined. The LLM reads the STIX/TAXII feed and classifies the attacker's motivation — financially motivated, IP-theft focused, destructive, etc. It then adjusts the persona prior vector to reflect which personas are most likely to attract that attacker's attention.
+This is a fundamentally different kind of LLM contribution than "nudging weights." Adjusting qₚ produces an operationally interpretable output: "this month, prioritize Finance_DB and HR_workstation personas." A security operator can read that output, understand it, and override it if domain knowledge warrants. Adjusting anonymous w values produces an opaque vector that requires the operator to trust the LLM without being able to verify its reasoning.
+
+H. The Six Objectives and Six Dimensions
+The six objectives (O1–O6) and six dimensions (D1–D6) are not independent features — they are a covering set over the space of attacker evasion strategies.
+Remove any single objective and a distinct evasion channel opens:
+	•	Without O1, the solver deploys in low-traffic zones where no attacker goes
+	•	Without O2, an attacker using uncovered techniques goes undetected
+	•	Without O3, an attacker shifts to an unmonitored tactic family
+	•	Without O4, fast-moving attackers complete the kill chain before detection fires
+	•	Without O5, the solver cannot distinguish prevention from forensics and misprices both
+	•	Without O6, lower-probability paths remain open as escape routes
+The six dimensions map onto the six objectives and show which structural properties of the formulation enforce each objective. D6 (Persona/identity) is new and closes the evasion channel that C5b, C12, and C13 together address: an attacker who fingerprints identities rather than types, bypassing the entire type-rotation defense.
+
+I. Complexity and Backward Compatibility
+The variable count grows from |K| (original) to |K|·|Z|·τ·|P|. For the XLarge instance this is 8·5·τ·|P| = 40|P|τ. At |P|=5 and τ=4 this is 800 binary variables — trivially small for RC2.
+The NP-hardness is preserved by the same Feige (1998) reduction from Weighted Maximum Coverage: setting |P|=1 recovers the one-zone reduction exactly, and |P|>1 is strictly harder because it adds the persona-conflict clause class C12 which has no analogue in the base reduction.
+The backward compatibility chain is exact:
+	•	|P|=1 removes the persona dimension and recovers x_{i,z,t}
+	•	Adding τ=1 removes the time dimension
+	•	Adding τᵈ=∞ removes rotation pressure
+	•	Adding |ZKᵢ|=1 collapses zones to a single zone
+	•	The result is exactly xᵢ from the original paper
+This means every result from the original paper — the Q-score comparisons, the force-multiplier table, the NP-hardness theorem — remains valid as a special case of this formulation.
+
+
+
+======
+
+
+
+
