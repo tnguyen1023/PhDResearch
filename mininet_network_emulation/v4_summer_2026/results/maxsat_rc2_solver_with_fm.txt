@@ -1,0 +1,136 @@
+
+====
+
+ZSTP_SCALE=XXLarge python3 maxsat_rc2_solver_with_fm.py
+
+========================================================================
+  ZSTP-V6 MaxSAT RC2 — Dissertation Solver with Force-Multiplier
+  Section G integrated: FM-augmented scheduling + 3 FM metrics
+========================================================================
+[PersonaLayer] C8/C13 compat: Δ=3 ≥ 2 ✓
+
+  [✓] is_airgapped: DMZ=False  OT=True  Cloud=False
+  qp: HR_works=0.2161  DevOps_s=0.1371  Finance_=0.2802  Generic_=0.0929  Executiv=0.1592  Partner_=0.1145
+  |K|=12 |Z|=7 H=8 |P|=6 |Θ|=5 A=1450
+  Weights: w4=1000 w3=100 w3b=70 w2=10 w2f=12 w1=1
+  FM_ALPHA=0.15  (Section G scheduling bonus weight)
+
+  [RC2] Solving 4 Θ scenarios with FM-augmented scheduling…
+    theta_low     Q=645312
+    theta_med     Q=645312
+    theta_high    Q=581539
+    theta_burst   Q=8960
+    theta_apt     Q=581539
+
+  RC2: r*=8960  Q=882331  FM-avg=0.00×  FM-max=0.00×  FM-gt1=0%  tech=13  C10=75%  Early=68.8%  C14=0  burn_p=0.0%  (2.11s)
+
+========================================================================
+  Section G — Cross-Path Force-Multiplier
+  Single deployment x_{i,z,t,p}=1 covering three paths simultaneously
+========================================================================
+
+  Path                   ρ    iv   Wj,a    qp    L3 weight  Formula
+  ----------------------------------------------------------------------
+  web-to-db           0.30   1.8   3.24  0.40        0.700  0.3×1.8×3.24×0.4=0.700
+  ot-infiltr.         0.15   1.7   3.24  0.40        0.330  0.15×1.7×3.24×0.4=0.330
+  brute-to-ad         0.20   1.6   3.24  0.40        0.415  0.2×1.6×3.24×0.4=0.415
+  ----------------------------------------------------------------------
+
+  RC2 total (qp=0.40):                       1.445  ✓ doc=1.445
+  Base-paper RC2 total (no qp):              3.613  ✓ doc=3.612
+  Base-paper Greedy (highest-ρ, no qp):      1.750  ✓ doc=1.749
+
+  RC2-vs-Greedy ratio at qp=1/|P|=0.25:    2.06×  ✓ doc≈2.1×
+
+  Interpretation:
+    • One db_trap in Internal covers all three paths simultaneously
+    • RC2 finds this; greedy only covers web-to-db (highest ρ)
+    • Persona prior qp=0.40 amplifies credit on Finance_DB persona
+    • At default qp=1/|P|=0.25, ratio≈2.1× — preserved from base paper
+========================================================================
+
+  [Section G] Force-Multiplier ranking of RC2 schedule:
+
+==============================================================================
+  Force-Multiplier Ranking — Top Deployments
+   #  trap           zone       persona                qp  paths      FM  total_credit
+  ----------------------------------------------------------------------------
+==============================================================================
+
+  [Baselines]
+    Random                  r*=   5364  FM-avg=0.00×  tech=16  C10=100%  Early=73.4%
+    Static-Best             r*=   5215  FM-avg=0.00×  tech=15  C10= 38%  Early=25.0%
+    Greedy-HighRho          r*=   4601  FM-avg=0.00×  tech= 6  C10= 62%  Early=25.0%
+    Greedy-BiDir            r*=   8249  FM-avg=0.00×  tech=16  C10= 88%  Early=96.9%
+    Greedy-Diverse          r*=   5215  FM-avg=0.00×  tech=15  C10= 38%  Early=25.0%
+    Round-Robin             r*=   6831  FM-avg=0.00×  tech=16  C10= 75%  Early=93.8%
+    LP-Relaxation           r*=   5491  FM-avg=0.00×  tech= 6  C10= 88%  Early=25.0%
+    Single-Zone             r*=   5221  FM-avg=0.00×  tech=12  C10=  0%  Early=15.6%
+    ThreatIntel-Only        r*=   4452  FM-avg=0.00×  tech= 6  C10= 38%  Early=25.0%
+    Max-PathCov             r*=   5070  FM-avg=0.00×  tech= 4  C10=  0%  Early=15.6%
+
+==================================================================================================================================================================================================
+  Solver                        r*     Q-med    FM-avg    FM-max   FM-gt1%      Tech       Fam      C10%      Hop%    Early%      Det%    ZnSprd     PDivr    PBurn%    TBurn%       C14     Churn
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+★ RC2                        8960     882331     0.00     0.00        0%     13      8      75%      68%     68.8%    32.8%       43%      100%      0.0%      0.0%      0      84
+  Greedy-BiDir               8249     611226     0.00     0.00        0%     16      8      88%      86%     96.9%    71.1%       71%       99%      0.0%      0.0%      0      75
+  Round-Robin                6831     450925     0.00     0.00        0%     16      8      75%      68%     93.8%    46.6%       43%       99%      4.8%     21.4%      0      63
+  LP-Relaxation              5491     129182     0.00     0.00        0%      6      3      88%      91%     25.0%    23.3%       86%      100%     75.0%     75.0%      0       0
+  Random                     5364     323137     0.00     0.00        0%     16      8     100%      91%     73.4%    53.4%       86%       94%      0.0%      3.2%      0      51
+  Single-Zone                5221     207986     0.00     0.00        0%     12      7       0%      32%     15.6%     8.6%       14%       90%     75.0%     75.0%      0       0
+  Static-Best                5215     208145     0.00     0.00        0%     15      8      38%      50%     25.0%    11.2%       29%      100%     75.0%     75.0%      0       0
+  Greedy-Diverse             5215     208145     0.00     0.00        0%     15      8      38%      50%     25.0%    11.2%       29%      100%     75.0%     75.0%      0       0
+  Max-PathCov                5070     202003     0.00     0.00        0%      4      3       0%      32%     15.6%     8.6%       14%      100%     75.0%     75.0%      0       0
+  Greedy-HighRho             4601     126687     0.00     0.00        0%      6      5      62%      82%     25.0%    18.4%       57%      100%     75.0%     75.0%      0       0
+  ThreatIntel-Only           4452     177906     0.00     0.00        0%      6      5      38%      50%     25.0%    11.2%       29%      100%     75.0%     75.0%      0       0
+==================================================================================================================================================================================================
+
+  ── Dimension Coverage Matrix ──────────────────────────────────
+  Solver                      D1  D2  D3  D4  D5  D6  Missing
+  ───────────────────────────────────────────────────────────────────────────
+  RC2                         ✓  ✓  ✓  ✓  ✓  ✓  all 6 ✓
+  Greedy-BiDir                ✓  ✓  ✓  ✓  ✗  ✓  D5(Optimality cert.)
+  Round-Robin                 ✓  ✗  ✓  ✓  ✗  ✗  D2(Attack-path ordering), D5(Optimality cert.), D6(Persona/identity)
+  LP-Relaxation               ✓  ✓  ✓  ✗  ✗  ✓  D4(Budget+conflicts), D5(Optimality cert.)
+  Random                      ✗  ✗  ✗  ✗  ✗  ✗  D1(Multi-zone+air-gap), D2(Attack-path ordering), D3(ATT&CK objectives), D4(Budget+conflicts), D5(Optimality cert.), D6(Persona/identity)
+  Single-Zone                 ✗  ✗  ✓  ✓  ✗  ✓  D1(Multi-zone+air-gap), D2(Attack-path ordering), D5(Optimality cert.)
+  Static-Best                 ✓  ✗  ✓  ✓  ✗  ✓  D2(Attack-path ordering), D5(Optimality cert.)
+  Greedy-Diverse              ✓  ✗  ✓  ✓  ✗  ✓  D2(Attack-path ordering), D5(Optimality cert.)
+  Max-PathCov                 ✓  ✓  ✓  ✓  ✗  ✗  D5(Optimality cert.), D6(Persona/identity)
+  Greedy-HighRho              ✓  ✓  ✗  ✓  ✗  ✗  D3(ATT&CK objectives), D5(Optimality cert.), D6(Persona/identity)
+  ThreatIntel-Only            ✓  ✗  ✓  ✓  ✗  ✓  D2(Attack-path ordering), D5(Optimality cert.)
+
+  ── Section G: Force-Multiplier Analysis ───────────────────────
+  Solver                      FM-avg    FM-max    FM>1%   FM>1.5%  Interpretation
+  ────────────────────────────────────────────────────────────────────────────────
+  ★ RC2                         0.00×      0.00×       0%        0%  Below single-path baseline
+    Random                      0.00×      0.00×       0%        0%  Below single-path baseline
+    Static-Best                 0.00×      0.00×       0%        0%  Below single-path baseline
+    Greedy-HighRho              0.00×      0.00×       0%        0%  Below single-path baseline
+    Greedy-BiDir                0.00×      0.00×       0%        0%  Below single-path baseline
+    Greedy-Diverse              0.00×      0.00×       0%        0%  Below single-path baseline
+    Round-Robin                 0.00×      0.00×       0%        0%  Below single-path baseline
+    LP-Relaxation               0.00×      0.00×       0%        0%  Below single-path baseline
+    Single-Zone                 0.00×      0.00×       0%        0%  Below single-path baseline
+    ThreatIntel-Only            0.00×      0.00×       0%        0%  Below single-path baseline
+    Max-PathCov                 0.00×      0.00×       0%        0%  Below single-path baseline
+
+  Section G document ratio (default qp=1/|P|): 0.00×  (check)
+  RC2 FM-avg=0.00× means RC2 earns 0% of greedy credit per deployment
+  Single-Zone FM=1.00× confirms: covers only 1 path per deployment
+
+  ── RC2 wins vs each baseline (17 metrics) ─────────────────────
+  vs Greedy-BiDir          : 10/17 ✓  loss: Tech,C10%,Hop%,Early%
+  vs Round-Robin           : 13/17 ✓  loss: Tech,Early%,Det%,Churn
+  vs LP-Relaxation         : 13/17 ✓  loss: C10%,Hop%,ZnSprd,Churn
+  vs Random                : 10/17 ✓  loss: Tech,C10%,Hop%,Early%
+  vs Single-Zone           : 16/17 ✓  loss: Churn
+  vs Static-Best           : 15/17 ✓  loss: Tech,Churn
+  vs Greedy-Diverse        : 15/17 ✓  loss: Tech,Churn
+  vs Max-PathCov           : 16/17 ✓  loss: Churn
+  vs Greedy-HighRho        : 14/17 ✓  loss: Hop%,ZnSprd,Churn
+  vs ThreatIntel-Only      : 16/17 ✓  loss: Churn
+
+  Grand total: 138/170 (81%) metric×baseline wins (incl. 3 FM metrics)
+
+  ======
