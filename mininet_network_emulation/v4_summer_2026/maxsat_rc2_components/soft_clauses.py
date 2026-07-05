@@ -60,7 +60,6 @@ Usage:
     sc.wcnf_soft_append(wcnf, var_map)
 """
 
-import math
 import numpy as np
 from collections import defaultdict
 from pysat.formula import WCNF
@@ -628,10 +627,10 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(__file__))
 
     try:
-        from config             import CFG
+        from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.config import CFG
         from persona_layer      import PersonaLayer
-        from decision_variables import DecisionVariables
-        from derived_weights    import DerivedWeights
+        from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.decision_variables import DecisionVariables
+        from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.derived_weights import DerivedWeights
     except ImportError:
         print("[ERROR] Run from the directory containing config.py")
         sys.exit(1)
