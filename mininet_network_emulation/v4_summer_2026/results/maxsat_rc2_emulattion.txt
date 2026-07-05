@@ -1,0 +1,114 @@
+=====
+
+ ZSTP_SCALE=XXLarge python3 maxsat_rc2_emulator.py
+
+====================================================================
+  ZSTP-V6 Network Emulation — PhD Dissertation
+  Scale=XXLarge  |K|=12 |Z|=7 H=8 |P|=6 |A|=1450
+  8 slots × 2.0s/slot = 16s emulation time
+====================================================================
+
+18:38:07 [ZSTP-EMU] Initialising ZSTPEmulator — Scale=XXLarge
+[PersonaLayer] C8/C13 compat: Δ=3 ≥ 2 ✓
+18:38:07 [ZSTP-EMU] Stack OK  qp={'HR_wor': 0.216, 'DevOps': 0.137, 'Financ': 0.28, 'Generi': 0.093, 'Execut': 0.159, 'Partne': 0.114}
+18:38:07 [ZSTP-EMU] |K|=12 |Z|=7 H=8 |P|=6 |A|=1450
+18:38:07 [ZSTP-EMU] ============================================================
+18:38:07 [ZSTP-EMU]   ZSTP-V6 Network Emulation — Live Mode
+18:38:07 [ZSTP-EMU]   8 slots × 2.0s = 16s total
+18:38:07 [ZSTP-EMU] ============================================================
+18:38:07 [ZSTP-EMU]
+── Slot t=0 ────────────────────────────────────────
+18:38:09 [ZSTP-EMU]   Honeypots: 30  Detections: 3  Early-intercepts: 0  Paths-hit: 1
+/Users/tnguye514@cable.comcast.com/t_maxsat_solver_poc/poc/MaxSat_Solver_POC/scripts/mininet_network_emulation/v4_summer_2026/maxsat_rc2_emulator.py:367: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp":      datetime.utcnow().isoformat() + "Z",
+18:38:09 [ZSTP-EMU]   STIX: class=financial  conf=0.55  hits=3
+18:38:09 [ZSTP-EMU]   qp update: HR_w=0.235  DevO=0.117  Fina=0.348  Gene=0.054  Exec=0.151  Part=0.095
+18:38:12 [ZSTP-EMU]   Q=894006  r*=8833  tech=13  C10=75%  Early=68.8%
+18:38:12 [ZSTP-EMU]
+── Slot t=1 ────────────────────────────────────────
+18:38:14 [ZSTP-EMU]   Honeypots: 30  Detections: 6  Early-intercepts: 1  Paths-hit: 1
+18:38:14 [ZSTP-EMU]   STIX: class=espionage  conf=0.70  hits=6
+18:38:14 [ZSTP-EMU]   qp update: HR_w=0.214  DevO=0.162  Fina=0.309  Gene=0.078  Exec=0.148  Part=0.089
+18:38:15 [ZSTP-EMU]   Algorithm 1: KEEP current (ΔQ=-96895)
+18:38:17 [ZSTP-EMU]   Q=890769  r*=8873  tech=13  C10=75%  Early=68.8%
+18:38:17 [ZSTP-EMU]
+── Slot t=2 ────────────────────────────────────────
+18:38:19 [ZSTP-EMU]   Honeypots: 30  Detections: 3  Early-intercepts: 1  Paths-hit: 1
+18:38:19 [ZSTP-EMU]   STIX: class=financial  conf=0.55  hits=3
+18:38:19 [ZSTP-EMU]   qp update: HR_w=0.235  DevO=0.125  Fina=0.358  Gene=0.049  Exec=0.147  Part=0.086
+18:38:21 [ZSTP-EMU]   Q=896966  r*=8847  tech=13  C10=75%  Early=68.8%
+18:38:21 [ZSTP-EMU]
+── Slot t=3 ────────────────────────────────────────
+18:38:23 [ZSTP-EMU]   Honeypots: 30  Detections: 9  Early-intercepts: 2  Paths-hit: 3
+18:38:23 [ZSTP-EMU]   STIX: class=espionage  conf=0.85  hits=9
+18:38:23 [ZSTP-EMU]   qp update: HR_w=0.214  DevO=0.165  Fina=0.313  Gene=0.077  Exec=0.146  Part=0.086
+18:38:24 [ZSTP-EMU]   Algorithm 1: KEEP current (ΔQ=-115536)
+18:38:26 [ZSTP-EMU]   Q=891807  r*=8878  tech=13  C10=75%  Early=68.8%
+18:38:26 [ZSTP-EMU]
+── Slot t=4 ────────────────────────────────────────
+18:38:28 [ZSTP-EMU]   Honeypots: 30  Detections: 9  Early-intercepts: 2  Paths-hit: 3
+18:38:28 [ZSTP-EMU]   STIX: class=financial  conf=0.85  hits=9
+18:38:28 [ZSTP-EMU]   qp update: HR_w=0.235  DevO=0.126  Fina=0.360  Gene=0.048  Exec=0.146  Part=0.085
+18:38:29 [ZSTP-EMU]   Algorithm 1: KEEP current (ΔQ=-89947)
+18:38:31 [ZSTP-EMU]   Q=897331  r*=8849  tech=13  C10=75%  Early=68.8%
+18:38:31 [ZSTP-EMU]
+── Slot t=5 ────────────────────────────────────────
+18:38:33 [ZSTP-EMU]   Honeypots: 30  Detections: 0  Early-intercepts: 0  Paths-hit: 0
+18:38:33 [ZSTP-EMU]   STIX: class=recon  conf=0.40  hits=0
+18:38:36 [ZSTP-EMU]   Q=897331  r*=8849  tech=13  C10=75%  Early=68.8%
+18:38:36 [ZSTP-EMU]
+── Slot t=6 ────────────────────────────────────────
+18:38:38 [ZSTP-EMU]   Honeypots: 30  Detections: 6  Early-intercepts: 2  Paths-hit: 2
+18:38:38 [ZSTP-EMU]   STIX: class=financial  conf=0.70  hits=6
+18:38:38 [ZSTP-EMU]   qp update: HR_w=0.242  DevO=0.113  Fina=0.376  Gene=0.038  Exec=0.146  Part=0.085
+18:38:39 [ZSTP-EMU]   Algorithm 1: KEEP current (ΔQ=-69339)
+18:38:41 [ZSTP-EMU]   Q=899269  r*=8839  tech=13  C10=75%  Early=68.8%
+18:38:41 [ZSTP-EMU]
+── Slot t=7 ────────────────────────────────────────
+18:38:43 [ZSTP-EMU]   Honeypots: 30  Detections: 3  Early-intercepts: 0  Paths-hit: 1
+18:38:43 [ZSTP-EMU]   STIX: class=espionage  conf=0.55  hits=3
+18:38:43 [ZSTP-EMU]   qp update: HR_w=0.216  DevO=0.161  Fina=0.319  Gene=0.073  Exec=0.146  Part=0.085
+18:38:45 [ZSTP-EMU]   Q=892615  r*=8875  tech=13  C10=75%  Early=68.8%
+18:38:47 [ZSTP-EMU]
+============================================================
+18:38:47 [ZSTP-EMU]   Emulation complete — Final r*=8875  Q=892615  live_det=39
+18:38:47 [ZSTP-EMU]
+[Baselines — analytical evaluation]
+18:38:51 [ZSTP-EMU]   Random                  r*=   5857  Q= 357851  tech=16
+18:38:56 [ZSTP-EMU]   Static-Best             r*=   5244  Q= 209268  tech=15
+18:39:00 [ZSTP-EMU]   Greedy-HighRho          r*=   4682  Q= 125167  tech= 6
+18:39:04 [ZSTP-EMU]   Greedy-BiDir            r*=   7747  Q= 507899  tech=16
+18:39:09 [ZSTP-EMU]   Greedy-Diverse          r*=   5244  Q= 209268  tech=15
+18:39:13 [ZSTP-EMU]   Round-Robin             r*=   6809  Q= 432210  tech=16
+18:39:17 [ZSTP-EMU]   LP-Relaxation           r*=   5494  Q= 136207  tech= 6
+18:39:22 [ZSTP-EMU]   Single-Zone             r*=   5300  Q= 211145  tech=12
+18:39:27 [ZSTP-EMU]   ThreatIntel-Only        r*=   4560  Q= 182164  tech= 6
+18:39:32 [ZSTP-EMU]   Max-PathCov             r*=   5086  Q= 202614  tech= 4
+
+==============================================================================================================================
+  Solver                          r*     Q-med      Tech      C10%    Early%      Det%    PBurn%    TBurn%       C14   LiveDet
+------------------------------------------------------------------------------------------------------------------------------
+★ RC2 (Emulated)               8875     892615     13      75%     68.8%    32.8%      0.0%      0.0%      0        39
+  Greedy-BiDir                 7747     507899     16      88%     96.9%    68.5%      0.0%      0.0%      0         0
+  Round-Robin                  6809     432210     16      75%     93.8%    46.6%      4.8%     21.4%      0         0
+  Random                       5857     357851     16      88%     76.6%    65.0%      0.0%      0.0%      0         0
+  LP-Relaxation                5494     136207      6      88%     25.0%    23.3%     75.0%     75.0%      0         0
+  Single-Zone                  5300     211145     12       0%     15.6%     8.6%     75.0%     75.0%      0         0
+  Static-Best                  5244     209268     15      38%     25.0%    11.2%     75.0%     75.0%      0         0
+  Greedy-Diverse               5244     209268     15      38%     25.0%    11.2%     75.0%     75.0%      0         0
+  Max-PathCov                  5086     202614      4       0%     15.6%     8.6%     75.0%     75.0%      0         0
+  Greedy-HighRho               4682     125167      6      62%     25.0%    18.4%     75.0%     75.0%      0         0
+  ThreatIntel-Only             4560     182164      6      38%     25.0%    11.2%     75.0%     75.0%      0         0
+==============================================================================================================================
+
+  Emulation facts:
+    Total live detections : 39
+    STIX bundles generated: 8
+    Schedule redeployments: 0
+    qp after emulation    : HR_wor=0.216  DevOps=0.161  Financ=0.319  Generi=0.073  Execut=0.146  Partne=0.085
+18:39:33 [ZSTP-EMU] [Chart] → /Users/tnguye514@cable.comcast.com/t_maxsat_solver_poc/poc/MaxSat_Solver_POC/scripts/mininet_network_emulation/v4_summer_2026/MaxSat_RC2_V6_Emulation.png
+
+  Done. Chart → /Users/tnguye514@cable.comcast.com/t_maxsat_solver_poc/poc/MaxSat_Solver_POC/scripts/mininet_network_emulation/v4_summer_2026/MaxSat_RC2_V6_Emulation.png
+
+
+  =======
