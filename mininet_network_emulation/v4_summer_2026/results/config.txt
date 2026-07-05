@@ -1,0 +1,43 @@
+
+
+=====
+
+
+ python3 maxsat_rc2_components/config.py
+====================================================================
+  ZSTP-V6 Config Self-Test  ──  Scale = XLarge
+====================================================================
+
+  Dimensions:
+    |K| =   8  trap types   : ['ssh_trap', 'db_trap', 'smb_trap', 'scada_trap', 'ad_trap', 'dns_trap', 'web_trap', 'generic_trap']
+    |Z| =   5  zones        : ['DMZ', 'Internal', 'Cloud', 'OT', 'Mgmt']
+    H   =   4  slots
+    |P| =   4  personas     : ['HR_workstation', 'DevOps_server', 'Finance_DB', 'Generic_Linux']
+    |A| =  500  assets       : {'DMZ': 80, 'Internal': 200, 'Cloud': 120, 'OT': 50, 'Mgmt': 50}
+    |G| =   4  attack paths : ['web-to-db', 'cloud-ad-pivot', 'ot-infiltration', 'mgmt-pivot']
+    |Θ| =   4  scenarios    : ['theta_low', 'theta_med', 'theta_high', 'theta_burst']
+
+  Complexity:
+    Primary vars  |K|·|Z|·H·|P| = 640
+    Soft-clause DB ~ O(|K|·|A|·|T|·H·|P|) = 1,152,000
+
+  Feasibility:
+    C8/C13: Δ=2 ≥ ⌈H/τdp0⌉−1 = 1  ✓
+    C15:    h_min=24.0h ≥ κ_min=12.0h  ✓
+
+  GK admitted pairs: 18/32  (τ_GK=0.65)
+
+  Weights: w4=1000 w3=100 w3b=70 w2=10 w2f=12 w1=1
+
+  [✓] Scale 'XLarge' — CFG ready for import.
+====================================================================
+
+  Quick-switch commands:
+    ZSTP_SCALE=Small     python config.py   |K|= 5 |Z|=3 H= 4 |P|=3 |A|=  150 pv=180
+    ZSTP_SCALE=Medium    python config.py   |K|= 8 |Z|=5 H= 6 |P|=4 |A|=  500 pv=960
+    ZSTP_SCALE=Large     python config.py   |K|=10 |Z|=6 H= 8 |P|=5 |A|= 1000 pv=2,400
+    ZSTP_SCALE=XLarge    python config.py   |K|= 8 |Z|=5 H= 4 |P|=4 |A|=  500 pv=640 ← active
+    ZSTP_SCALE=XXLarge   python config.py   |K|=12 |Z|=7 H= 8 |P|=6 |A|= 1450 pv=4,032
+
+
+  ======

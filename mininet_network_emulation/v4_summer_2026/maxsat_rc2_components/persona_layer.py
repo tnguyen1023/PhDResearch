@@ -708,7 +708,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(__file__))
 
     try:
-        from config import CFG
+        from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.config import CFG
     except ImportError:
         print("[WARN] config.py not found — using inline minimal config")
         CFG = {

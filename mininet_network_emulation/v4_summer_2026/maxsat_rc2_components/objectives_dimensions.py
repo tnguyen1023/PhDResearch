@@ -641,12 +641,12 @@ if __name__ == "__main__":
     import sys, os
     sys.path.insert(0, os.path.dirname(__file__))
 
-    from config             import CFG
+    from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.config import CFG
     from persona_layer      import PersonaLayer
-    from decision_variables import DecisionVariables
-    from derived_weights    import DerivedWeights
+    from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.decision_variables import DecisionVariables
+    from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.derived_weights import DerivedWeights
     from soft_clauses       import SoftClauses
-    from hard_constraints   import HardConstraints
+    from scripts.mininet_network_emulation.v4_summer_2026.maxsat_rc2_components.hard_constraints import HardConstraints
 
     print("\n" + "=" * 70)
     print("  Objectives and Dimensions — Self-Test  (Section I)")
