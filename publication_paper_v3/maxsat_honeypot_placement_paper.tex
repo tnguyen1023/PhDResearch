@@ -62,6 +62,41 @@ Honeypots offer a rare, favorable cost asymmetry in defense: one well-placed dec
 
 No published honeypot-placement method jointly optimizes over type, zone, time, and persona under hard operational constraints while returning a certificate that the schedule cannot be beaten. This is the gap this paper closes, and closes with a claim stronger than "better than greedy": a \emph{worst-case-optimal, certified} schedule, validated not only analytically but under live network emulation with real TCP connections and real STIX-bundle generation.
 
+\subsection{The spatial--temporal--identity framework}\label{sec:sti}
+
+The central conceptual contribution of this paper is treating honeypot placement as a \textbf{three-axis optimization problem} rather than a point-in-time placement heuristic. The table below maps each axis to its formal symbols, its operational question, and the hard constraints that govern it.
+
+\begin{table}[h]
+\centering
+\caption{The three axes of ZSTP. Every constraint in C1--C15 governs exactly one axis.}
+\label{tab:sti}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{2.2cm}p{2.3cm}p{2.8cm}@{}}
+\toprule
+\textbf{Spatial} ($z\in Z$) & \textbf{Temporal} ($t\in\bar{T}$) & \textbf{Identity} ($p\in P$) \\
+\midrule
+\emph{Where?} & \emph{When?} & \emph{As whom?} \\[2pt]
+DMZ, Internal, Cloud, OT, Mgmt & Slot $t{=}1,\ldots,H$ & HR, DevOps, Finance~DB \\[2pt]
+C1--C7: budget, air-gap, path coverage & C8--C11: churn, discovery, persistence & C12--C14: collision, rotation, cross-zone \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Each axis interacts with the others in ways that make them inseparable: a spatially optimal decision (placing a decoy in the highest-traffic zone) can be temporally disastrous (leaving it long enough for its type to be fingerprinted) and identity-incoherent (wrong persona for the campaign). Prior work treats at most one axis explicitly and leaves the others as background assumptions.
+
+\medskip\noindent\textbf{Spatial reference ($z\in Z$).}\enspace
+Zone $z\in Z{=}\{\text{DMZ},\text{Internal},\text{Cloud},\text{OT},\text{Mgmt}\}$ is a first-class primary index of $x_{i,z,t,p}$. The spatial axis encodes \emph{where the attacker is in the kill chain}: a DMZ deployment ($h_d{=}1$) earns maximum prevention credit; an OT deployment ($h_d{=}3$) earns maximum forensic credit. The derived weight $\ddot{w}_{j,a}=w_{j,a}\cdot d_{m,a}/h_{d,a}$ (eq.~2) makes this explicit: interception near the entry point prevents damage that a later interception only records. The spatial axis also hosts the air-gap constraint (C5) and cross-zone persona uniqueness (C14), which closes the attack-surface gap that within-zone collision avoidance (C12) cannot.
+
+\medskip\noindent\textbf{Temporal reference ($t\in\bar{T}$).}\enspace
+Slot $t\in\bar{T}{=}\{1,\ldots,H\}$ encodes \emph{when the attacker encounters the decoy relative to its exposure window}. Two independent discovery clocks run on the temporal axis: the \emph{type-discovery clock} (C9) fires after $\tau^d$ consecutive active slots -- service fingerprinting is a property of the deployed \emph{type}, not the persona; the \emph{persona-discovery clock} (C13) fires after $\tau^{dp}$ slots -- identity fingerprinting is a property of the \emph{persona}, not the service. Neither resets the other. Both tighten under rising threat (C11): a patient attacker ($\theta_{low}$, $\rho{=}0.15$) gives slack $\tau^d{=}4$; a bursty attacker ($\theta_{burst}$, $\rho{=}0.85$) forces $\tau^d{=}1$, zeroing all L4/L3 credit. The path-persistence constraint (C10) closes the gap-slot vulnerability: every high-probability path must be covered in $\lceil\rho_\pi H\rceil$ slots, preventing an attacker from waiting for an unwatched month.
+
+\medskip\noindent\textbf{Identity reference ($p\in P$).}\enspace
+Persona $p\in P$ is the fourth index of $x_{i,z,t,p}$ and the newest conceptual addition to the base formulation. The identity axis encodes \emph{who the honeypot claims to be}: an attacker correlating DNS suffix, AD forest membership, and certificate-transparency logs can re-identify a decoy across zone boundaries even if its TCP stack has never been seen before. The persona prior $q_p$ -- updated by Algorithm~1 from STIX/TAXII intelligence and, via the LLM-as-Persona-Oracle (\S\ref{sec:llm}), enriched by natural-language CTI reasoning -- encodes the defender's current read on which identities the attacker's campaign targets.
+
+\medskip\noindent\textbf{The joint tension.}\enspace
+Maximizing spatial coverage conflicts with temporal sustainability (more placements burn faster), which conflicts with identity coherence (more personas increase cross-zone collision risk). RC2 resolves this tension globally in a single certified solve. Every prior method resolves it heuristically, in at most one axis, and cannot certify the result.
+
 \subsection{Why MaxSAT, specifically}
 Honeypot placement decomposes cleanly into constraints that must \emph{never} be violated (budget ceilings, air-gap isolation, mimicry plausibility, identity non-collision) and objectives that should be maximized wherever those constraints allow (early interception, technique breadth, tactic-family breadth). This is exactly the hard-clause/soft-clause split that defines a weighted partial MaxSAT instance. Framing the problem this way lets us hand the \emph{entire} instance -- every constraint, every scenario -- to RC2 and receive back a certified optimum rather than a heuristic recommendation, with the certificate itself (D5, Table~\ref{tab:results}) being something no baseline heuristic in our comparison can produce, by construction.
 
@@ -291,8 +326,40 @@ ThreatIntel-Only  & 4560 & 182164 & 6  & 38\% & 25.0\% & 11.2\% & 75.0\% & 75.0\
 
 Beyond $r^*$, RC2 uniquely achieves \textbf{zero discovery burn} on both type (PBurn\%) and persona (TBurn\%) channels, and is the only solver to produce a \textbf{D5 optimality certificate} and \textbf{C14$=$0} cross-zone persona leaks by construction -- properties no heuristic baseline can claim regardless of tuning, because they require the hard-constraint layer of \S\ref{sec:formulation}, not a better search heuristic.
 
-\subsection{Why RC2 wins: the force-multiplier mechanism}
-This mechanism explains \emph{why} RC2 outperforms greedy placement, not merely \emph{that} it does (Fig.~\ref{fig:fm}). A single deployment simultaneously satisfies soft clauses across every attack path that intersects its hop, while a greedy solver -- limited to the single highest-$\rho$ path at each step -- leaves the remaining credit unclaimed. On the representative shared-hop slice: one \texttt{db\_trap} in the Internal zone earns $0.700+0.330+0.415=1.445$ in joint L3 credit across three concurrent paths, versus $0.700$ for a greedy solver considering only the highest-probability path -- a $2.06\times$ force multiplier, matching the base formulation's theoretical $\approx\!2.1\times$ (Fig.~\ref{fig:fm}, bottom row: FM-avg~$=1.53\times$, FM-max~$=1.90\times$ across all deployed types at Scale=XLarge, with the certified worst-case floor $r^*$ leading the best baseline by $+26.2\%$). Critically, this ratio is \emph{preserved, not created,} by the persona prior: after a STIX-driven shift elevates $q_{p}(\text{Finance\_DB})$, absolute credit rises (Fig.~\ref{fig:fm}, bottom-right) but the RC2-to-greedy ratio holds, confirming the force multiplier is a structural property of the WCNF encoding -- joint satisfiability of shared-hop soft clauses -- rather than an artifact of the persona weighting layer.
+\subsection{Section G: Cross-path force-multiplier (extended)}
+A single deployment decision $x_{i,z,t,p}{=}1$ simultaneously resolves L3 soft clauses across \emph{multiple} attack paths and earns the $q_p$ persona-prior bonus on each. This is the structural property -- not a tuning artifact -- that explains why RC2 outperforms greedy placement (Fig.~\ref{fig:fm}).
+
+\begin{table*}[t]
+\centering
+\caption{Section~G force-multiplier: one \texttt{db\_trap} in Internal zone, $q_p{=}0.40$, $W_{j,a}{=}3.24$. A single deployment earns credit across all three concurrent paths simultaneously.}
+\label{tab:fm}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lrrrrp{6.5cm}@{}}
+\toprule
+Path & $\rho$ & $iv$ & $W_{j,a}$ & $q_p$ & L3 weight = $\rho\times iv\times W_{j,a}\times q_p$ \\
+\midrule
+web$\to$db (hop 2)    & 0.30 & 1.8 & 3.24 & 0.40 & $0.30\times 1.8\times 3.24\times 0.40 = \mathbf{0.700}$ \\
+OT infiltration (hop 2) & 0.15 & 1.7 & 3.24 & 0.40 & $0.15\times 1.7\times 3.24\times 0.40 = \mathbf{0.330}$ \\
+brute$\to$AD (hop 2)  & 0.20 & 1.6 & 3.24 & 0.40 & $0.20\times 1.6\times 3.24\times 0.40 = \mathbf{0.415}$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{RC2 total} ($q_p{=}0.40$, all three paths simultaneously)} & $\mathbf{1.445}$ \\
+\multicolumn{5}{l}{Greedy (highest-$\rho$ path only, web$\to$db)}                     & $0.700$ \\
+\multicolumn{5}{l}{\textbf{Force-multiplier ratio RC2\,/\,Greedy}}                    & $\mathbf{2.06\times}$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\noindent The force multiplier arises because all three paths share the Internal zone hop. A greedy solver evaluates only the highest-$\rho$ path (web$\to$db, $\rho{=}0.30$) when deciding where to place the trap, earning credit $0.700$. RC2 encodes all paths simultaneously in the WCNF, so a single clause for the Internal zone hop is satisfied by one deployment and earns credit across \emph{all three} paths: $0.700+0.330+0.415=1.445$ -- the same trap, the same slot, the same zone, $2.06\times$ the credit.
+
+Formally, the effective force multiplier for a deployment at hop $h$ of zone $z$ is:
+\begin{equation}
+\begin{split}
+\mathrm{FM}_{\mathrm{eff}}(z,h) &= \frac{\displaystyle\sum_{\pi:\,z\in\pi,\,h<|\pi|} \rho_\pi\cdot iv_{\pi,h}\cdot W_{j,a}\cdot q_p}{\displaystyle\max_{\pi} \;\rho_\pi\cdot iv_{\pi,h}\cdot W_{j,a}\cdot q_p}\\[4pt]
+&= \frac{0.700+0.330+0.415}{0.700} = \frac{1.445}{0.700} \approx 2.06\times
+\end{split}
+\end{equation}
+At the default persona prior $q_p{=}1/|P|{=}0.25$, the ratio is $2.06\times$, matching the base-paper theoretical $\approx2.1\times$. After a STIX-driven shift to $q_p(\text{Finance\_DB}){=}0.40$, absolute credit rises by $53\%$ while the ratio holds -- confirming the multiplier is a property of the WCNF clause topology, not the persona weighting layer. Across all deployed types at Scale=XLarge the empirical distribution gives FM-avg~$=1.53\times$ and FM-max~$=1.90\times$ (Fig.~\ref{fig:fm}, bottom row).
 
 \begin{figure*}[t]
 \centering
@@ -322,22 +389,22 @@ Each builds on the previous: the topology weight $W$ flows into the objective $Q
 \underbrace{Q(x)=\textstyle\sum_l\sum_c w_l\cdot\mathrm{sat}(c)}_{\text{objective (6)--(11) all-path credit}}
 \end{equation*}
 \begin{equation*}
-\hspace{4em}
 Q(x)
 \;\xrightarrow{\;\min_{\Theta}\;}
-\underbrace{r^*(x)=\min_{\theta\in\Theta}\,Q_\theta(x)}_{\text{worst-case floor (16)--(17)}}
-\;\longrightarrow\;
-\text{RC2 maximises }r^*
+\underbrace{r^*(x)=\min_{\theta\in\Theta}Q_\theta(x)}_{\text{worst-case floor}}
+\;\to\;
+\text{RC2 max.\ }r^*
 \end{equation*}
 
 Equation (2)--(4) explains \emph{why one trap is worth $2.06\times$ more} than greedy believes when it sits on a shared zone-hop. $Q(x)$ sums that credit across all paths, all slots, all personas, with the $1000\times/100\times/10\times/1\times$ weight hierarchy making prevention strictly dominate forensics. $r^*$ takes the minimum over attacker scenarios -- because a rational adversary always selects their best response, forcing the minimum to be the realized outcome. RC2 maximises $r^*$. That is the dissertation in one line.
 
 \subsection{The force-multiplier: why one fake safe catches three thieves}
-The single most important structural property of the formulation is that one deployment decision simultaneously satisfies soft clauses across every attack path that shares its hop:
+The single most important structural property of the formulation is that one deployment decision simultaneously satisfies soft clauses across every attack path that shares its hop (Table~\ref{tab:fm}, \S\ref{sec:results}).
+The formal expression is given in Section~G (equation~15); numerically:
 \[
-\mathrm{FM}_{\mathrm{effective}} = \frac{\sum_\pi \rho_\pi\cdot iv_{\pi,h}\cdot W_{j,a}\cdot q_p}{\max_\pi\;\rho_\pi\cdot iv_{\pi,h}\cdot W_{j,a}\cdot q_p}
+\mathrm{FM}_{\mathrm{eff}} = \frac{0.700+0.330+0.415}{0.700} = \frac{1.445}{0.700} \approx 2.06\times
 \]
-For a \texttt{db\_trap} in the Internal zone at $q_p{=}0.40$: three concurrent paths yield credit $0.700{+}0.330{+}0.415{=}1.445$ versus $0.700$ for a greedy solver that sees only the highest-$\rho$ path -- a $2.06\times$ force multiplier, matching the theoretical $\approx2.1\times$. The ratio is \emph{preserved, not created}, by the persona prior: after a STIX-driven shift to $q_p(\text{Finance\_DB}){=}0.40$, absolute credit rises by 53\% while the FM ratio holds, confirming the multiplier is a property of the WCNF topology, not the weight layer.
+For a \texttt{db\_trap} in the Internal zone at $q_p{=}0.40$: three concurrent paths (web$\to$db, OT infiltration, brute-force$\to$AD) all pass through the Internal hop and yield total credit $0.700{+}0.330{+}0.415{=}1.445$ versus $0.700$ for a greedy solver that sees only the highest-$\rho$ path -- a $2.06\times$ force multiplier, matching the theoretical $\approx2.1\times$. The ratio is \emph{preserved, not created}, by the persona prior: after a STIX-driven shift to $q_p(\text{Finance\_DB}){=}0.40$, absolute credit rises by 53\% while the FM ratio holds, confirming the multiplier is a property of the WCNF topology, not the weight layer.
 
 This is why the force multiplier is the paper's key analytic contribution: it proves RC2's advantage is \emph{structural} -- encoded in the WCNF clause graph -- rather than a product of search luck or tuning.
 
