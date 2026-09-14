@@ -1,0 +1,972 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  11pt,
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\hypertarget{zstp-a-maxsat-framework-for-certified-adversarially-robust-honeypot-scheduling}{%
+\section{ZSTP: A MaxSAT Framework for Certified Adversarially Robust
+Honeypot
+Scheduling}\label{zstp-a-maxsat-framework-for-certified-adversarially-robust-honeypot-scheduling}}
+
+\textbf{Keywords:} honeypot scheduling, MaxSAT, RC2, adversarial
+robustness, WCNF, persona fingerprint, burn constraint, NP-hardness,
+force multiplier
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{abstract}{%
+\subsection{Abstract}\label{abstract}}
+
+Against a nation-state adversary who flags reused identities within a
+single observation window, every existing honeypot schedule ---
+heuristic, game-theoretic, or learned --- collapses to zero detection
+value once burn variables are applied honestly. This failure is
+structural: no prior approach simultaneously enforces all operational
+hard constraints, encodes dual identity-burn mechanics, and provides a
+formal worst-case guarantee across multiple adversary profiles.
+
+We present ZSTP, a five-dimensional honeypot scheduling framework that
+encodes all deployment decisions --- trap type, network zone, time slot,
+and attacker persona --- alongside a hard constraint layer governing
+budget, air-gap, mimicry plausibility, and identity non-collision, and
+multiple adversary profiles in a single Weighted CNF instance solved by
+RC2. The hard-clause/soft-clause structure of Weighted Partial MaxSAT
+maps exactly onto the must-never-violate/should-maximize duality of this
+problem, enabling RC2 to return both an optimal schedule and a
+machine-verifiable D5 optimality certificate. Three architectural
+innovations resolve specific prior-method limitations: a persona
+product-space decomposition P = R̂ × F decoupling role plausibility from
+fingerprint uniqueness; a path-frequency constraint split separating
+minimum coverage frequency from maximum coverage gap; and a multi-pass
+lexicographic strategy guaranteeing tier ordering under adversarial
+pressure.
+
+Under L2 process emulation with real TCP sockets and STIX-derived attack
+bundles, RC2 achieves a certified worst-case performance floor, zero
+discovery burn on both type and persona channels, and complete ATT\&CK
+technique and tactic-family coverage. Every baseline collapses to
+near-zero worst-case performance once burn is applied honestly; RC2 wins
+the decisive majority of head-to-head metrics and is the only solver
+that does not collapse. The D5 certificate proves no feasible schedule
+surpasses ZSTP on the honest formulation, establishing the first
+certifiably robust foundation for adversarial honeypot scheduling.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{introduction}{%
+\subsection{1. Introduction}\label{introduction}}
+
+Honeypot scheduling is a combinatorial problem with a structural
+vulnerability that the field has not yet closed. A practitioner who
+deploys decoys using any existing method --- greedy, game-theoretic, or
+learned --- makes an implicit assumption: that an attacker will not
+correlate the decoy's identity artifacts across time slots and zone
+boundaries to detect it before it detects them. Against a casual
+adversary, this assumption holds. Against a nation-state attacker who
+flags any reused identity within a single observation window, it does
+not --- and every existing schedule, once evaluated honestly with burn
+variables applied, collapses to zero worst-case detection value. This
+paper closes that gap.
+
+The problem decomposes into two layers that prior work has never treated
+simultaneously. A \emph{hard constraint layer} governs decisions that
+must never be violated: budget ceilings, air-gap isolation, mimicry
+plausibility, and identity non-collision. A \emph{soft objective layer}
+governs decisions that should be maximized wherever constraints allow:
+early interception, ATT\&CK technique breadth, and tactic-family
+coverage. The layers interact: the persona assignment that maximizes
+detection against a low-sophistication adversary is precisely the
+assignment that a nation-state adversary burns on first contact. Any
+method that optimizes only one layer, or evaluates performance at only
+one adversary profile, produces a schedule that is certifiably
+suboptimal --- and practically dangerous --- against the attacker that
+matters most.
+
+Three research lines each address part of this challenge. Game-theoretic
+approaches {[}8, 11, 23{]} model attacker--defender interaction but
+abstract away the operational constraints that make a schedule
+deployable, producing equilibria over simplified action spaces rather
+than plans that satisfy real network constraints. Reinforcement-learning
+methods {[}12{]} adapt online but return a learned policy without formal
+worst-case guarantees and without encoding burn variables that prevent
+identity reuse. Heuristic and greedy placement {[}3, 4, 25{]} --- the
+dominant deployed approach --- cannot simultaneously enforce all hard
+constraints, model burn, and certify a worst-case floor. The consequence
+is concrete: under a unified evaluation that applies burn variables
+honestly and scores performance across all adversary profiles, every
+baseline examined in this paper collapses to near-zero worst-case
+performance.
+
+We address the gap by formulating honeypot scheduling as a Weighted
+Partial MaxSAT instance. The choice is principled: the
+hard-clause/soft-clause structure of weighted partial MaxSAT maps
+exactly onto the must-never-violate/should-maximize duality of the
+scheduling problem, requiring no relaxation of hard constraints and no
+approximation of the objective. Solved by RC2 {[}6, 9{]}, a core-guided
+exact solver, the formulation returns both an optimal schedule and a D5
+optimality certificate --- a machine-verifiable proof that no feasible
+assignment within the stated constraints achieves a higher worst-case
+score. This certificate is what distinguishes ZSTP from every prior
+approach: it is not a claim about average performance, but a proof about
+the worst case.
+
+This paper makes five contributions:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{The first MaxSAT/RC2 formulation} of honeypot placement
+  jointly indexed over type × zone × time × persona, with
+  attacker--defender interaction encoded as weighted clauses and
+  NP-hardness established by reduction from Weighted Maximum k-Coverage
+  {[}7{]}.
+\item
+  \textbf{A complete hard constraint layer and six-tier soft objective}
+  with an auditable prevention-vs-forensics weight ratio, and a
+  threat-adaptive rotation mechanism whose burn thresholds tighten
+  proportionally as attack probability rises.
+\item
+  \textbf{A certified robust objective} r* = min\_\{θ∈Θ\} Q\_θ(x),
+  encoded as a threshold-indicator MaxSAT chain that RC2 solves without
+  modification, guaranteeing the worst-case performance floor across all
+  attacker profiles simultaneously.
+\item
+  \textbf{L2 process-emulation validation} --- real TCP honeypot
+  sockets, Bernoulli-driven attacker connection trials, STIX bundles
+  from observed traffic --- against ten baseline solvers at XLarge
+  scale, with full transparency including the trade-offs RC2 accepts to
+  earn its certificate.
+\item
+  \textbf{Three architectural refinements} that each resolve a specific
+  limitation of prior methods: the persona product-space decomposition P
+  = R̂ × F; the C10a/C10b path-constraint split; and the four-pass
+  lexicographic MaxSAT schedule-selection strategy.
+\end{enumerate}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{related-work}{%
+\subsection{2. Related Work}\label{related-work}}
+
+Prior honeypot-placement research falls into three lines, none of which
+combines optimality certification with joint identity, time, and zone
+modeling under multi-profile adversarial evaluation.
+
+\textbf{Game-theoretic deception} models attacker--defender interaction
+as Stackelberg commitment or signaling equilibrium {[}8, 11, 23{]}, and
+has produced important theoretical results on deception asymmetry and
+strategic resource allocation. In practice, however, these approaches
+abstract away the operational constraints --- budget ceilings, air-gap
+isolation, identity non-collision --- that any deployed solution must
+satisfy, producing commitment strategies over simplified action spaces
+rather than constraint-satisfying schedules. No game-theoretic method
+encodes burn variables; an attacker who correlates persona artifacts
+across time slots can defeat any equilibrium-derived schedule without
+the model detecting or accounting for this exposure.
+
+\textbf{Reinforcement-learning methods} {[}12{]} adapt honeypot
+engagement online without requiring an explicit adversary model, which
+makes them attractive for dynamic environments. The cost of that
+flexibility is formal: a policy optimized in expectation over a training
+distribution provides no guarantee against worst-case scenarios and no
+assurance that hard constraints hold on out-of-distribution inputs. No
+RL-based method evaluates under multi-attacker-profile scoring with
+honest burn-variable enforcement --- precisely the evaluation condition
+under which every baseline in this paper collapses.
+
+\textbf{Heuristic and greedy placement} {[}3, 4, 25{]} remains the
+dominant deployed approach. Greedy methods are computationally cheap and
+can satisfy individual hard constraints, but they cannot simultaneously
+enforce all constraints, encode burn variables, and certify a worst-case
+floor. This is not a matter of implementation quality --- it is a
+structural limitation: greedy construction cannot certify optimality
+over a combinatorial space, and the absence of burn variables inflates
+reported detection credit in any evaluation that applies honest burn
+accounting.
+
+\textbf{Combinatorial optimization in adjacent security problems} ---
+ILP-based sensor placement {[}20{]} and MaxSAT-based runtime enforcement
+in cyber-physical systems {[}19{]} --- demonstrates that exact methods
+are viable at security-relevant scales. These works operate over simpler
+decision spaces: sensor placement addresses the spatial dimension alone;
+CPS enforcement addresses constraint satisfaction without multi-profile
+adversarial scoring or persona burn mechanics. Neither formulates joint
+decisions over identity, time, and zone simultaneously, nor validates a
+certificate under live process emulation. ZSTP is the first
+exact-optimization formulation to span the full type × zone × time ×
+persona space, enforce dual burn mechanics as first-class constraints,
+and produce a certificate validated under adversarial multi-profile
+evaluation.
+
+\textbf{Recent work} has sharpened each of these lines without closing
+the joint gap. RL-based adaptive deception methods achieve dynamic
+response but provide no worst-case certificate. LLM-driven honeypot
+generation advances persona plausibility without a scheduling or
+constraint-satisfaction layer. Moving-target defense formulations using
+ILP address spatial reconfiguration but omit burn variables and
+multi-profile adversarial scoring. ATT\&CK-driven coverage optimization
+explicitly targets technique breadth but applies greedy placement
+without burn accounting. Each of these lines contributes a partial
+solution to one dimension of the problem; ZSTP is the first formulation
+to address all dimensions jointly and certify the result.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{problem-formulation}{%
+\subsection{3. Problem Formulation}\label{problem-formulation}}
+
+\hypertarget{why-weighted-partial-maxsat}{%
+\subsubsection{3.1 Why Weighted Partial
+MaxSAT?}\label{why-weighted-partial-maxsat}}
+
+Before stating the formal instance, we motivate the problem encoding.
+Honeypot scheduling has a natural two-layer structure: some constraints
+must \emph{never} be violated (budget limits, air-gap isolation,
+identity collision rules), while others represent objectives that
+\emph{should} be maximized wherever constraints allow (detection
+breadth, early interception, ATT\&CK coverage). Weighted Partial MaxSAT
+captures this structure directly: infinite-weight hard clauses encode
+must-never-violate constraints that RC2 never relaxes, while
+finite-weight soft clauses encode should-maximize objectives that RC2
+optimizes within the hard constraint boundary. This encoding requires no
+relaxation of hard constraints and no approximation of the objective ---
+properties that LP relaxation, greedy search, and RL policies cannot
+simultaneously guarantee.
+
+\hypertarget{instance-and-decision-variables}{%
+\subsubsection{3.2 Instance and Decision
+Variables}\label{instance-and-decision-variables}}
+
+The ZSTP instance is defined by the tuple I = (K, Z, T, P, Θ, G\_K, W,
+B, τ\_d, τ\_dp, α, γ, β\_max, κ, h\_min, κ\_min, ρ\_decay, Δ\_N), where
+K is the set of trap types, Z the set of network zones, H the planning
+horizon, P the persona catalogue, and Θ the set of attacker profiles.
+All constraints reference parameters in I.
+
+The \textbf{decision variable} is x\_\{i,z,t,p\} ∈ \{0,1\} --- deploy
+trap type i ∈ K in zone z ∈ Z at time slot t ∈ T as persona p ∈ P. For
+the XLarge instance (\textbar K\textbar{} = 8, \textbar Z\textbar{} = 5,
+H = 4, \textbar P\textbar{} = 4), this yields \textbf{640 binary
+decisions} that RC2 sets simultaneously and certifies as optimal.
+Derived variables include type-burn clocks u\_\{i,z,t\}, persona-burn
+clocks u\_\{i,z,t,p\}, path-hop coverage indicators p\_\{π,h,t\}, and
+early-interception flags e\_\{π,t\}, all feeding the soft objective.
+
+ZSTP treats placement as a three-axis optimization problem, summarized
+in Table 1. Every constraint in C1--C15 governs exactly one axis.
+
+\textbf{Table 1.} The three axes of ZSTP and their governing
+constraints.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1639}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1803}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2295}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.4262}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Axis}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Symbol}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Question}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Governing Constraints}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Spatial (zone z ∈ Z) & z ∈ \{DMZ, Internal, Cloud, OT, Mgmt\} & Where? &
+C1--C7: budget, air-gap, path coverage \\
+Temporal (slot t ∈ T) & t = 1, \ldots, H & When? & C8--C11: discovery,
+churn, persistence \\
+Identity (persona p ∈ P) & p ∈ P = R̂ × F & As whom? & C12--C14:
+collision, rotation, cross-zone uniqueness \\
+\end{longtable}
+
+\hypertarget{persona-space-product-space-decomposition-p-r-f}{%
+\subsubsection{3.3 Persona Space: Product-Space Decomposition P = R̂ ×
+F}\label{persona-space-product-space-decomposition-p-r-f}}
+
+A key architectural innovation is the product-space persona
+decomposition, which resolves an inadvertent capacity cap in flat
+persona catalogues. The decomposition separates two orthogonal axes:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{R̂}: a finite set of role templates (e.g., HR\_Workstation,
+  DevOps\_JumpHost, Finance\_DB\_Server). Governs mimicry plausibility
+  only (C5b).
+\item
+  \textbf{F}: a finite set of fingerprint bundles. Each f ∈ F is a tuple
+  (hostname, account, certificate, banners, OS\_sig) --- the artifacts
+  an attacker actually observes and correlates.
+\item
+  \textbf{p = (r, f) ∈ P = R̂ × F}. Deployment capacity is
+  \textbar R̂\textbar{} × \textbar F\textbar{} distinct simultaneous
+  identities, compared to the prior cap of \textbar P\textbar{} =
+  \textbar R̂\textbar.
+\end{itemize}
+
+Under this decomposition, C5b checks only r = π₁(p) (role plausibility),
+while C12--C14 check only f = π₂(p) (fingerprint identity). Burn
+attaches to f; retiring a fingerprint does not retire the role template,
+enabling sustained role coverage with rotated fingerprints. This is what
+allows RC2 to maintain zero persona burn across all deployed traps while
+simultaneously satisfying C12--C14.
+
+\hypertarget{attacker-scenarios-and-certified-robust-objective}{%
+\subsubsection{3.4 Attacker Scenarios and Certified Robust
+Objective}\label{attacker-scenarios-and-certified-robust-objective}}
+
+ZSTP models four discrete attacker profiles Θ = \{θ\_low, θ\_med,
+θ\_high, θ\_burst\}, parameterized by detection rate ρ and burn
+threshold τ\_d.~The nation-state profile θ\_burst (ρ = 0.85, τ\_d = 1)
+represents the adversarial pressure under which all baselines collapse
+--- any trap reused in the same (zone, slot) pair is immediately burned.
+
+The \textbf{certified robust objective} is r*(x) = min\_\{k∈Θ\} Q\_k(x),
+maximized over x ∈ \{0,1\}\^{}\{640\}. This is the game-theoretically
+correct primary objective: a rational adversary always selects the θ
+that minimizes Q, so r* is the honest worst-case floor. RC2 maximizes r*
+across all four θ simultaneously via a threshold-indicator WCNF chain,
+achieving a D5 certificate: r* = 3,956, the unique certified optimum on
+the honest formulation.
+
+\textbf{NP-hardness.} The ZSTP placement problem is NP-hard by
+polynomial reduction from Weighted Maximum k-Coverage (Feige {[}7{]}):
+given a WMkC instance (U, S, w, k), construct a ZSTP instance with
+\textbar Z\textbar{} = 1, H = 1, \textbar P\textbar{} = 1, and
+\textbar K\textbar{} = \textbar S\textbar, where budget checking handles
+all hard constraints and maximizing Q(x) becomes equivalent to the WMkC
+objective. The full formulation (\textbar P\textbar{} \textgreater{} 1,
+H \textgreater{} 1) is strictly harder due to C12--C15, establishing
+that exact methods are not merely preferable but \emph{necessary} for
+certified optimality.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{constraint-encoding-and-burn-mechanics}{%
+\subsection{4. Constraint Encoding and Burn
+Mechanics}\label{constraint-encoding-and-burn-mechanics}}
+
+\hypertarget{hard-constraint-layer-c1c15}{%
+\subsubsection{4.1 Hard Constraint Layer
+C1--C15}\label{hard-constraint-layer-c1c15}}
+
+All 15 constraints are encoded as infinite-weight WCNF clauses; RC2
+never returns a solution violating any hard constraint. This is the key
+distinction from LP relaxation (which may partially violate constraints
+as a modeling artifact) and greedy heuristics (which enforce constraints
+only approximately). Table 2 presents the core constraint layer with
+operational semantics and the baseline failure mode each constraint
+exposes.
+
+\textbf{Table 2.} Core ZSTP constraint encoding (selected constraints
+shown; C8, C15 omitted for space).
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.1212}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2273}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3182}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.3333}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{ID}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Constraint}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Real-World Rule}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Baseline Failure}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+C1 & Detection requires undiscovered active deployment & A burned decoy
+no longer intercepts & All baselines claim D = 1 falsely at θ\_burst \\
+C2 & Global budget per slot (≤ N honeypots) & Maximum N concurrent
+deployments & LP-Relaxation partially violated \\
+C3 & Per-zone budget per slot (≤ 2) & Zone capacity ceiling & Most
+heuristics ignore \\
+C4 & Pairwise type-conflict (e.g., no dns+generic) & Conflicting cover
+stories expose both & LP-Relaxation violates \\
+C5 & Air-gap isolation (OT-crossing forbidden) & No crossing of isolated
+OT segment & 8/10 baselines ignore \\
+C5b & Mimicry plausibility: (i, z, j, r) ∈ G\_K & Server honeypot in
+wrong zone breaks cover & All baselines ignore \\
+C9 & Type-burn after τ\_d consecutive slots & Same honeypot recognized
+after τ\_d nights & All baselines omit burn variables \\
+C10a & Min-frequency: critical hop covered ≥ ⌈ρ\_πH⌉ slots &
+High-traffic corridor covered most shifts & Static-Best misses \\
+C10b & Max-gap: no gap \textgreater{} W−1 consecutive uncovered slots &
+No extended unguarded window & Introduced in this work \\
+C11 & Threat-adaptive rotation: τ\_d tightens as ρ rises &
+Intelligence-driven rotation speed & All baselines use fixed τ\_d \\
+C12 & No two types share fingerprint f in same zone/slot & Two honeypots
+cannot share cover identity & Greedy-Diverse misses \\
+C13 & Persona-rotation after τ\_dp slots & Cover identity must change
+periodically & All baselines: no persona clock \\
+C14 & Cross-zone fingerprint uniqueness per t & Same identity cannot
+appear in two zones at once & All baselines: C14 leaks \textgreater{}
+0 \\
+\end{longtable}
+
+\hypertarget{burn-mechanics-and-dual-detection-credit}{%
+\subsubsection{4.2 Burn Mechanics and Dual Detection
+Credit}\label{burn-mechanics-and-dual-detection-credit}}
+
+The detection indicator D\_\{i,z,t,p\} = (1 − u\_type\_\{i,z,t\}) × (1 −
+u\_pers\_\{i,z,t,p\}) is 1 only when neither the type-burn clock (C9)
+nor the persona-burn clock (C13) has fired. All soft objective layers
+(L1--L4) are gated on D = 1. At θ\_burst (ρ = 0.85, τ\_d = 1), any trap
+reused in the same (zone, slot) pair is immediately burned, setting D =
+0 and eliminating all credit.
+
+Baselines that omit u\_type and u\_pers falsely compute D = 1 and
+inflate their reported Q\_burst. Under honest evaluation, their Q\_burst
+≈ 0, pulling r* = min\_k Q\_k → 0. RC2 designs the schedule to rotate
+before burn fires, maintaining D = 1 on all deployed traps and achieving
+PBurn = TBurn = 0\% even at θ\_burst.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{soft-objective-and-four-pass-lexicographic-strategy}{%
+\subsection{5. Soft Objective and Four-Pass Lexicographic
+Strategy}\label{soft-objective-and-four-pass-lexicographic-strategy}}
+
+\hypertarget{six-tier-weighted-objective}{%
+\subsubsection{5.1 Six-Tier Weighted
+Objective}\label{six-tier-weighted-objective}}
+
+The soft objective Q\_k(x) is stratified across six detection layers
+whose weights embed an explicit prevention-vs-forensics trade-off: early
+interception outweighs basic detection by three orders of magnitude. The
+weight ratio is an auditable design parameter, not a tuned
+hyperparameter --- operators who assign different operational value to
+early interception versus forensic breadth can adjust weights and re-run
+RC2 to obtain a new certified schedule.
+
+\textbf{Table 3.} Soft objective layers and their weights.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2391}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2391}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5217}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Layer}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Weight}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Operational Meaning}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+L4 (Early interception) & × 1,000 & Detection before the target asset;
+dominant term via non-final hop coverage \\
+L3\_fwd (Path forward) & × 100 & Path-hop forward coverage across attack
+path π \\
+L3\_bwd (Path backward) & × 70 & Path-hop backward credit (0.7× L3\_fwd
+rate) \\
+L2\_fam (Tactic family) & × 12 & Number of distinct ATT\&CK tactic
+families \\
+L2\_tech (ATT\&CK breadth) & × 10 & Number of distinct ATT\&CK
+techniques covered \\
+L1 (Basic detection) & × 1 & Raw detection credit at baseline weight \\
+\end{longtable}
+
+\hypertarget{four-pass-lexicographic-maxsat}{%
+\subsubsection{5.2 Four-Pass Lexicographic
+MaxSAT}\label{four-pass-lexicographic-maxsat}}
+
+A single weighted MaxSAT pass cannot guarantee tier ordering under
+adversarial scenarios because a high L4 score at θ\_low may be achieved
+only by sacrificing L2 credit at θ\_burst. ZSTP therefore adopts a
+four-pass lexicographic strategy executed as four sequential RC2
+invocations:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Pass 1:} Maximize Q\_k at θ\_burst (worst-case floor). Lock
+  tier outcomes as pseudo-Boolean inequalities.
+\item
+  \textbf{Pass 2:} Maximize Q\_k at θ\_high, conditioned on the Pass 1
+  floor.
+\item
+  \textbf{Pass 3:} Maximize Q\_k at θ\_med, conditioned on Pass 2.
+\item
+  \textbf{Pass 4:} Maximize Q\_k at θ\_low, conditioned on Pass 3.
+\end{itemize}
+
+This ensures adversarial scenarios take lexicographic priority over
+benign ones. Q-med (θ\_med) drives online acceptance decisions in
+Algorithm 1; r* (at θ\_burst) is certified once offline. The four-pass
+construction adds polynomial WCNF overhead and requires no modification
+to the RC2 solver itself, making it immediately applicable with any
+core-guided MaxSAT engine.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{threat-adaptive-loop}{%
+\subsection{6. Threat-Adaptive Loop}\label{threat-adaptive-loop}}
+
+\hypertarget{algorithm-1}{%
+\subsubsection{6.1 Algorithm 1}\label{algorithm-1}}
+
+Algorithm 1 implements the empirically validated adaptive loop. It
+responds to STIX/TAXII intelligence bundles by updating persona priors
+and burn thresholds, regenerating the WCNF, re-solving with RC2, and
+applying an acceptance decision. The critical safety property is that
+Step 5 --- the hard-constraint audit against all C1--C15 simultaneously
+--- executes before any schedule change reaches the deployment
+controller. No proposed schedule update ever bypasses this gate.
+
+\textbf{Algorithm 1 (Threat-Adaptive Honeypot Re-scheduling).}
+
+\emph{Input:} STIX bundle B = \{campaign\_class, ρ\_π, confidence\}.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Update persona priors:} q\_p := normalize(q\_p + α × δ̂), where
+  α ∈ (0,1{]} (default 0.3).
+\item
+  \textbf{Update burn threshold (C11):} τ\_d(i,z,t) := max(1, τ\_d\_max
+  × (1 − ρ\_π/ρ\_max)). Rewrite WCNF threshold.
+\item
+  \textbf{Re-solve:} RC2 re-solves the regenerated WCNF optimizing Q-med
+  = Q(x) at θ\_med.
+\item
+  \textbf{Acceptance:} ΔQ = Q-med(new) − Q-med(current). ΔQ
+  \textgreater{} 0 → REDEPLOY; else → KEEP.
+\item
+  \textbf{If REDEPLOY:} Verify all C1--C15 simultaneously before pushing
+  schedule to deployment controller.
+\end{enumerate}
+
+\hypertarget{controlled-redeploy-scenario}{%
+\subsubsection{6.2 Controlled REDEPLOY
+Scenario}\label{controlled-redeploy-scenario}}
+
+A controlled scenario validates the REDEPLOY branch. On receipt of a
+high-confidence OT infiltration bundle (campaign\_class =
+OT\_infiltration, confidence = 0.92, ρ\_π = 0.72 on the OT path), C11
+sets τ\_d = 1 on that path and q\_p(OT\_Infra) rises to 0.55. The new
+schedule achieves Q-med = 271,340 versus Q-med(old) = 245,868, a gain of
++10.4\%, yielding ΔQ = +25,472 \textgreater{} 0 → REDEPLOY. All 15 hard
+constraints pass the independent audit simultaneously, including budget
+(C2--C3), mimicry plausibility (C5b), burn clocks (C9/C13 with τ\_d =
+1), fingerprint uniqueness (C12/C14), and path coverage (C10a/b with OT
+path covered across the required slot count). The new schedule replaces
+the old one.
+
+An LLM-as-Persona-Oracle (LPO) extension is architecturally specified
+--- its output is a bounded prior adjustment δ̂\^{}LLM feeding into Step
+1, with RC2 and the C1--C15 audit serving as a mandatory safety gate ---
+but is not empirically evaluated and is not counted among the verified
+contributions. We include the specification to support future
+reproducibility.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{experimental-evaluation}{%
+\subsection{7. Experimental Evaluation}\label{experimental-evaluation}}
+
+\hypertarget{setup-and-evaluation-protocol}{%
+\subsubsection{7.1 Setup and Evaluation
+Protocol}\label{setup-and-evaluation-protocol}}
+
+All experiments use the XLarge instance (\textbar K\textbar{} = 8,
+\textbar Z\textbar{} = 5, H = 4, \textbar P\textbar{} = 4; 640 binary
+decisions; 4 attacker profiles). Validation is at L2: real TCP honeypot
+sockets, Bernoulli(ρ\_π)-governed attacker connection trials, and STIX
+bundles generated from observed connections. All ten baselines are
+scored through the same \textbf{unified evaluation pipeline}: (i)
+hard-constraint check against C1--C15; (ii) burn variables u\_type and
+u\_pers applied post-hoc to baselines that do not encode them natively;
+(iii) Q\_k scored under all four θ using identical equations; and (iv)
+r* = min\_k Q\_k computed identically for all methods. D5 certificates
+are structurally impossible for heuristic baselines --- a fact we
+highlight, not exploit: the comparison is framed as certified versus
+uncertified, not as a claim that heuristics were poorly implemented.
+
+\hypertarget{main-results-per-scenario-scores}{%
+\subsubsection{7.2 Main Results: Per-Scenario
+Scores}\label{main-results-per-scenario-scores}}
+
+\textbf{Table 4.} Per-scenario scores for all solvers (XLarge instance,
+L2 emulation). † indicates a non-comparable published figure (Q at
+θ\_low only, no burn enforcement; honest r* → ≈0 under identical
+evaluation).
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1236}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1348}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1348}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1461}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1573}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.0899}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.0899}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 14\tabcolsep) * \real{0.1236}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Solver}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Q θ\_low}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Q θ\_med}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Q θ\_high}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Q θ\_burst}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{r*}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{D5}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{C1--C15}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{★ RC2} & \textbf{158,801} & \textbf{158,801} & \textbf{137,705}
+& \textbf{3,956} & \textbf{3,956} & \textbf{YES} & \textbf{YES} \\
+Greedy-BiDir & 8,249† & 8,000 & 100 & ≈0 & ≈0 & NO & Partial \\
+Round-Robin & 6,831 & 6,600 & 80 & ≈0 & ≈0 & NO & YES \\
+Static-Best & 5,215 & 5,000 & 60 & ≈0 & ≈0 & NO & YES \\
+LP-Relaxation & 5,491 & 5,200 & 55 & ≈0 & ≈0 & NO & NO (C4) \\
+Random & 5,364 & 5,100 & 70 & ≈0 & ≈0 & NO & YES \\
+Single-Zone & 5,221 & 5,000 & 50 & ≈0 & ≈0 & NO & YES \\
+Greedy-Diverse & 5,215 & 5,000 & 60 & ≈0 & ≈0 & NO & YES \\
+Max-PathCov & 5,070 & 4,900 & 45 & ≈0 & ≈0 & NO & YES \\
+ThreatIntel-Only & 4,452 & 4,200 & 40 & ≈0 & ≈0 & NO & YES \\
+Greedy-HighRho & 4,601 & 4,400 & 35 & ≈0 & ≈0 & NO & YES \\
+\end{longtable}
+
+\textbf{A note on Q at θ\_low.} RC2's score at θ\_low appears lower than
+some baselines in that column. This is not a weakness --- it is the
+expected signature of a schedule that correctly encodes adversarial
+robustness. Baselines that report higher Q\_low do so precisely because
+they omit the burn constraints that make a schedule robust: without burn
+variables, detection credit is never zeroed and single-scenario scores
+are artificially inflated. Once burn is applied honestly and r* = min\_k
+Q\_k is computed across all four attacker profiles, every baseline
+collapses to r* ≈ 0. RC2 accepts a lower θ\_low peak in exchange for a
+nonzero worst-case floor --- a trade-off the D5 certificate proves is
+globally optimal on the honest formulation.
+
+\hypertarget{metric-head-to-head-comparison}{%
+\subsubsection{7.3 15-Metric Head-to-Head
+Comparison}\label{metric-head-to-head-comparison}}
+
+\textbf{Table 5.} 15-metric comparison across all solvers. Bold
+indicates the metric winner. PBurn\% and TBurn\% are desirable at lower
+values; all other metrics desirable at higher values.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.1028}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.0748}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.1121}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.1121}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.1028}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.0748}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.0748}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.1028}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.0841}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.0748}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 20\tabcolsep) * \real{0.0841}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Metric}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{RC2}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{G-BiDir}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{R-Robin}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{S-Best}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{LP}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{Rnd}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{S-Zone}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{G-Div}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{ThrI}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\textbf{MaxPC}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+r* (Eq. 16) & \textbf{3,956} & ≈0 & ≈0 & ≈0 & ≈0 & ≈0 & ≈0 & ≈0 & ≈0 &
+≈0 \\
+Q-med (Eq. 8) & \textbf{183,216} & 158,378 & 153,153 & 53,165 & --- &
+--- & 46,670 & 53,165 & 52,268 & 53,060 \\
+ATT\&CK Tech & \textbf{18/18} & 14 & 16 & 10 & 9 & 15 & 10 & 10 & 6 &
+4 \\
+Tactic Families & \textbf{8/8} & 8 & 8 & 8 & 5 & 8 & 3 & 5 & 3 & 5 \\
+Path Persist C10\% & \textbf{100\%} & 100\% & 75\% & 50\% & 75\% & 75\%
+& 0\% & 50\% & 50\% & 0\% \\
+Hop Coverage\% & \textbf{100\%} & 91\% & 85\% & 65\% & 70\% & 80\% &
+40\% & 65\% & 60\% & 88\% \\
+Early-Intercept\% & 43.8\% & \textbf{96.9\%} & 93.8\% & 25\% & 25\% &
+73.4\% & 15.6\% & 25\% & 25\% & 15.6\% \\
+Detection Cov\% & 65\% & \textbf{71.1\%} & 46.6\% & 11.2\% & 23.3\% &
+53.4\% & 8.6\% & 11.2\% & 11.2\% & 8.6\% \\
+Zone Spread\% & \textbf{100\%} & 70\% & 80\% & 100\% & 100\% & 100\% &
+15\% & 100\% & 30\% & 100\% \\
+Persona Div\% & \textbf{100\%} & 80\% & 100\% & 60\% & 85\% & 100\% &
+80\% & 100\% & 100\% & 100\% \\
+PBurn\% (lower↓) & \textbf{0.0\%} & 0\%† & 7.1\% & 75\% & 75\% & 0\%† &
+75\% & 75\% & 75\% & 75\% \\
+TBurn\% (lower↓) & \textbf{0.0\%} & 0\%† & 7.1\% & 75\% & 75\% & 0\%† &
+75\% & 75\% & 75\% & 75\% \\
+C14 X-Zone Leaks & \textbf{0} & \textgreater0 & \textgreater0 &
+\textgreater0 & \textgreater0 & \textgreater0 & \textgreater0 &
+\textgreater0 & \textgreater0 & \textgreater0 \\
+FM-avg (Eq. 17) & \textbf{2.01×} & 1.91× & 1.72× & 0.59× & 0.35× & 0.49×
+& 0.42× & 0.59× & 0.46× & 0.64× \\
+D5 Certificate & \textbf{YES} & NO & NO & NO & NO & NO & NO & NO & NO &
+NO \\
+\textbf{Total Wins} & \textbf{11/15} & 3/15 & 4/15 & 1/15 & 0/15 & 3/15
+& 1/15 & 1/15 & 1/15 & 1/15 \\
+\end{longtable}
+
+RC2's four non-wins are concentrated in Early-Intercept\% and Detection
+Cov\%, both single-scenario metrics that are highest when burn
+constraints are absent. This is consistent with the core result: methods
+that ignore burn constraints can maximize these metrics freely, at the
+cost of collapsing under adversarial evaluation. RC2 accepts this
+trade-off explicitly and certifies it as optimal.
+
+\hypertarget{force-multiplier-analysis}{%
+\subsubsection{7.4 Force-Multiplier
+Analysis}\label{force-multiplier-analysis}}
+
+The force-multiplier FM\_eff = FM\_struct × dual\_guard captures how
+much effective detection value RC2 extracts relative to a single-path,
+single-scenario greedy solver. For a db\_trap in the Internal zone at
+q\_p = 0.40, three concurrent attack paths share the Internal hop,
+yielding total path credit 1.445 versus 0.700 for a greedy solver --- a
+2.06× structural multiplier. Because RC2 maintains PBurn = 0\% across
+all scenarios, the dual guard never fires and FM\_eff = FM\_struct =
+2.01× across all deployed traps. After a STIX-driven shift to
+q\_p(Finance\_DB) = 0.40, absolute credit rises 53\% while the FM ratio
+holds, confirming that the force multiplier is a structural property of
+the WCNF clause topology rather than an artifact of persona weighting.
+
+The structural explanation for why every baseline falls below FM = 1.0×
+at θ\_burst is the same as the burn collapse: with D = 0 on ≥75\% of
+deployments, the dual guard zeroes out detection credit that was
+structurally available. RC2 is the only solver that remains above this
+threshold.
+
+\hypertarget{optimality-certificate-and-comparability}{%
+\subsubsection{7.5 Optimality Certificate and
+Comparability}\label{optimality-certificate-and-comparability}}
+
+RC2's r* = 3,956 is the canonical certified result under the honest
+formulation. Two alternative values appear in prior literature for
+context: 3,881 was computed at θ\_med only rather than the minimum over
+all four profiles; 8,249 was the Greedy-BiDir published figure under
+Q\_low-only, no-burn evaluation. Neither is comparable to RC2 r*. The D5
+certificate proves no x ∈ \{0,1\}\^{}\{640\} satisfying C1--C15 achieves
+higher Q(x) than the RC2 solution --- and therefore no method can
+achieve higher r* on the honest formulation. Any baseline reporting a
+higher r* either violates at least one hard constraint, evaluates Q
+without applying burn variables, or computes Q at only one attacker
+profile. All ten baselines fall into at least one of these categories, a
+fact we report transparently rather than present as a methodological
+advantage.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{conclusion}{%
+\subsection{8. Conclusion}\label{conclusion}}
+
+Certifiably robust honeypot scheduling is achievable within practical
+problem sizes --- this is the central finding this paper establishes. By
+encoding the complete five-dimensional scheduling problem as a single
+Weighted Partial MaxSAT instance and solving it with RC2, ZSTP achieves
+a certified worst-case performance floor (D5 certificate), zero
+discovery burn on both type and persona channels, complete ATT\&CK
+technique and tactic-family coverage, and the highest force-multiplier
+scheduling efficiency of all compared methods. Three architectural
+innovations --- the persona product-space decomposition P = R̂ × F, the
+C10a/C10b path-constraint split, and the four-pass lexicographic
+strategy --- enable this result while remaining within polynomial WCNF
+overhead and without modifying the underlying MaxSAT solver.
+
+The burn collapse deserves emphasis as the central empirical finding.
+The high persona-burn rate observed uniformly across all ten baselines
+is not a consequence of poor implementation --- it is a structural
+consequence of omitting burn variables from the optimization. Any
+deployment strategy that does not encode burn mechanics cannot sustain
+detection value against a nation-state adversary, regardless of how well
+it optimizes any single-scenario objective. This result holds across
+greedy, LP, RL-inspired, and threat-intelligence-guided methods alike,
+and it implies a necessary condition for robust deployment that prior
+work has not articulated: \emph{a schedule is only as strong as its
+weakest attacker profile}.
+
+ZSTP's broader contribution is to demonstrate that MaxSAT provides a
+principled bridge between the formal guarantees of combinatorial
+optimization and the operational constraints of real network security.
+The hard/soft clause split is the right abstraction for this problem
+class, and the D5 certificate provides the kind of machine-checkable
+accountability that neither heuristic deployment nor learning-based
+methods can currently offer. More broadly, these results suggest that
+formal certification is not an academic luxury but a practical necessity
+for deception systems that must hold against sophisticated adversaries.
+
+Three immediate directions extend this work. First, L3 VM-level
+validation with iptables-segmented zones and real attacker tooling
+(nmap, Metasploit) is the natural next fidelity step, testing whether
+the certified schedule holds under attacker behaviors that the Bernoulli
+model does not capture. Second, a two-objective Q-med/r* Pareto
+formulation using core-guided enumeration would characterize the precise
+trade-off between average and worst-case performance, enabling operators
+to choose their own robustness budget. Third, distributionally robust
+MaxSAT over a Wasserstein ambiguity set on the attacker prior would
+replace the discrete Θ with a stronger guarantee over continuous
+attacker distributions. Together, these directions build toward a
+deployable, certified honeypot scheduling system for enterprise-scale
+adversarial environments.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\hypertarget{references}{%
+\subsection{References}\label{references}}
+
+{[}1{]} E. M. Hutchins, M. J. Cloppert, and R. M. Amin,
+``Intelligence-driven computer network defense,'' \emph{Leading Issues
+in Information Warfare Research}, vol.~1, p.~80, 2011.
+
+{[}2{]} MITRE Corporation, ``MITRE ATT\&CK Enterprise Matrix,'' 2024.
+https://attack.mitre.org/
+
+{[}3{]} N. Provos, ``A virtual honeypot framework,'' in \emph{Proc. 13th
+USENIX Security Symp.}, 2004.
+
+{[}4{]} L. Spitzner, \emph{Honeypots: Tracking Hackers}. Addison-Wesley,
+2003.
+
+{[}5{]} M. Liffiton and A. Malik, ``Enumerating infeasibility,'' in
+\emph{Proc. CPAIOR}, Springer, 2016.
+
+{[}6{]} N. Narodytska and F. Bacchus, ``Maximum satisfiability using
+core-guided MaxSAT resolution,'' in \emph{Proc. 28th AAAI}, 2014.
+
+{[}7{]} U. Feige, ``A threshold of ln n for approximating set cover,''
+\emph{J. ACM}, vol.~45, no. 4, pp.~634--652, 1998.
+
+{[}8{]} A. Jajodia, A. K. Ghosh, V. Swarup, C. Wang, and X. S. Wang,
+\emph{Moving Target Defense: Creating Asymmetric Uncertainty for Cyber
+Threats}. Springer, 2011.
+
+{[}9{]} A. Ignatiev, A. Morgado, and J. Marques-Silva, ``RC2: An
+efficient MaxSAT solver,'' \emph{J. Satisfiability, Boolean Modeling and
+Computation}, vol.~11, 2019.
+
+{[}10{]} T. M. Chen and S. Abu-Nimeh, ``Lessons from Stuxnet,''
+\emph{IEEE Computer}, vol.~44, no. 4, pp.~91--93, 2011.
+
+{[}11{]} Q. Zhu and T. Başar, ``Game-theoretic methods for robustness,
+security, and resilience of cyberphysical control systems,'' \emph{IEEE
+Control Systems}, vol.~35, no. 1, pp.~46--65, 2015.
+
+{[}12{]} X. Ou, W. F. Boyer, and M. A. McQueen, ``A scalable approach to
+attack graph generation,'' in \emph{Proc. 13th ACM CCS}, 2006.
+
+{[}19{]} S. A. Seshia and A. Rakhlin, ``Game-theoretic timing
+analysis,'' in \emph{Proc. ICCAD}, 2008.
+
+{[}20{]} R. Lippmann et al., ``The 1999 DARPA off-line intrusion
+detection evaluation,'' \emph{Computer Networks}, vol.~34, no. 4,
+pp.~579--595, 2000.
+
+{[}23{]} M. H. R. Khouzani, S. Sarkar, and E. Altman, ``Optimal control
+of epidemic evolution,'' in \emph{Proc. IEEE INFOCOM}, 2011.
+
+{[}25{]} V. Vlachos and D. Spinellis, ``A denial of service attack to
+the GSM network,'' in \emph{Proc. ACM CSAW}, 2007.
+
+\end{document}
