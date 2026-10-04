@@ -1,0 +1,15 @@
+# MaxSAT solver POC (zstp_emu_*) — install with:
+#   python3 -m pip install -r requirements.txt
+
+# SAT/MaxSAT encoding and solvers (imported as `pysat`; do NOT install `pysat`)
+python-sat
+
+# LP baselines (scipy.optimize.linprog); newer builds avoid the macOS _spropack load error
+numpy
+scipy>=1.16
+
+# CP-SAT cross-check (ortools.sat.python.cp_model)
+ortools
+
+# Charts (charts.py)
+matplotlib
