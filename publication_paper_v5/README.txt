@@ -62,4 +62,20 @@ Real-world security is not claimed; that is what L3 would test.
 
 In short, contribution 4 is a careful consistency and robustness check of the model through running processes, not a field test.
 
+====
+
+Step	Time
+run_all.py: main pipeline (r*, certificates, baselines, emulation, Algorithm 1, sensitivity)	6.7 min
+Tables, paired statistics, figures, values	0.6 min
+Validation (reference simulator, STIX, paper values, NP reduction)	under 1 s
+Robust heuristics + persona rotation	3.8 min
+Horizon scaling H = 4, 5, 6, 8	23.8 min (H = 8 alone about 15 min)
+Three tests	0.2 min
+Second, compared run of run_all.py	6.7 min
+Total	41.8 min
+
+Faster option: python3 reproduce.py --quick skips the scaling study and the second compared run. Based on the times above, that's about 11 minutes. It still regenerates everything except Table 10 and the reproducibility row.
+
+On a faster machine with more cores it will be quicker, but the solver steps mostly use one core each, so expect a similar order of magnitude. Memory stays under 2 GB.
+
 =====
