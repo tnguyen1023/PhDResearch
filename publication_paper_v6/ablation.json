@@ -1,0 +1,1549 @@
+{
+ "meta": {
+  "instance_hash": "5cb2c5f369c5",
+  "episodes": 100,
+  "bootstrap": 10000,
+  "seed": 20261003,
+  "r_star": 7052.62,
+  "ablation_encoder_identical_when_nothing_removed": true,
+  "hard_clauses": 33011,
+  "A4_sum_optimum_int": 3176359,
+  "A4_cpsat_check": {
+   "status": "OPTIMAL",
+   "objective_int": 3176359,
+   "bound_int": 3176359
+  },
+  "seconds": 1596.8
+ },
+ "ZSTP max-min": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ssh_trap",
+    "Internal",
+    1,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 11,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 7247.03,
+   "med": 9513.64,
+   "high": 7052.62,
+   "burst": 7950.3
+  },
+  "worst_case": 7052.62,
+  "worst_profile": "high",
+  "burn_burst_pct": 27.272727272727273,
+  "pburn_burst_pct": 27.272727272727273,
+  "tburn_burst_pct": 27.272727272727273,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 81.25,
+  "hop_coverage_med_pct": 34.61538461538461,
+  "emulated": {
+   "low": 2030.1468,
+   "med": 2613.9025,
+   "high": 2075.3518,
+   "burst": 2281.601
+  },
+  "emulated_worst_mean": 2030.1468,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.0,
+   "high": 8.545454545454547,
+   "burst": 18.81818181818182
+  },
+  "paired_vs_maxmin": null
+ },
+ "A1 recognition-blind (G1)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    1,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "dns_trap",
+    "Cloud",
+    2,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    1,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    1,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    0,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    1,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 16,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 5645.5,
+   "med": 6291.5,
+   "high": 2964.92,
+   "burst": 2985.39
+  },
+  "worst_case": 2964.92,
+  "worst_profile": "high",
+  "burn_burst_pct": 75.0,
+  "pburn_burst_pct": 75.0,
+  "tburn_burst_pct": 37.5,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 50.0,
+  "hop_coverage_med_pct": 26.923076923076923,
+  "emulated": {
+   "low": 2486.9857,
+   "med": 2969.6761,
+   "high": 1870.0678,
+   "burst": 1243.2595
+  },
+  "emulated_worst_mean": 1243.2595,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 1.6875,
+   "high": 25.4375,
+   "burst": 53.6875
+  },
+  "paired_vs_maxmin": {
+   "diff": 786.8873000000001,
+   "ci95": [
+    532.1254000000001,
+    957.2742000000001
+   ]
+  },
+  "solve_seconds": 46.7
+ },
+ "A2 identity-blind (G2)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    1,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    1,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "DevOps_JumpHost"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    1,
+    "DevOps_JumpHost"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "smb_trap",
+    "Internal",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    2,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "DMZ",
+    1,
+    "Generic_Linux"
+   ]
+  ],
+  "deployments": 16,
+  "violations": {
+   "C14": 4
+  },
+  "feasible": false,
+  "model": {
+   "low": 7312.33,
+   "med": 7657.09,
+   "high": 3915.09,
+   "burst": 3987.4
+  },
+  "worst_case": 3915.09,
+  "worst_profile": "high",
+  "burn_burst_pct": 68.75,
+  "pburn_burst_pct": 68.75,
+  "tburn_burst_pct": 18.75,
+  "C14_leaks": 5,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 62.5,
+  "hop_coverage_med_pct": 28.846153846153847,
+  "emulated": {
+   "low": 2478.8593,
+   "med": 2976.9536,
+   "high": 1698.7846,
+   "burst": 1416.4109
+  },
+  "emulated_worst_mean": 1416.4109,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 2.0625,
+   "high": 28.625,
+   "burst": 54.1875
+  },
+  "paired_vs_maxmin": {
+   "diff": 613.7359000000001,
+   "ci95": [
+    356.88290000000006,
+    790.2896999999996
+   ]
+  },
+  "solve_seconds": 66.4,
+  "repaired": {
+   "schedule": [
+    [
+     "db_trap",
+     "Cloud",
+     1,
+     "Generic_Linux"
+    ],
+    [
+     "db_trap",
+     "Cloud",
+     3,
+     "Finance_DB_Server"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     0,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     2,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     3,
+     "Generic_Linux"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     0,
+     "DevOps_JumpHost"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     1,
+     "DevOps_JumpHost"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     3,
+     "DevOps_JumpHost"
+    ],
+    [
+     "smb_trap",
+     "Internal",
+     2,
+     "Finance_DB_Server"
+    ],
+    [
+     "web_trap",
+     "Cloud",
+     0,
+     "Finance_DB_Server"
+    ],
+    [
+     "web_trap",
+     "Cloud",
+     2,
+     "DevOps_JumpHost"
+    ]
+   ],
+   "deployments": 11,
+   "violations": {},
+   "feasible": true,
+   "model": {
+    "low": 6350.34,
+    "med": 6704.38,
+    "high": 3546.53,
+    "burst": 3695.95
+   },
+   "worst_case": 3546.53,
+   "worst_profile": "high",
+   "burn_burst_pct": 63.63636363636363,
+   "pburn_burst_pct": 63.63636363636363,
+   "tburn_burst_pct": 18.181818181818183,
+   "C14_leaks": 0,
+   "path_persistence_pct": 100.0,
+   "early_intercept_med_pct": 56.25,
+   "hop_coverage_med_pct": 19.23076923076923,
+   "emulated": {
+    "low": 2196.7551,
+    "med": 2618.8588,
+    "high": 1572.6708,
+    "burst": 1447.1635
+   },
+   "emulated_worst_mean": 1447.1635,
+   "emulated_recognized_pct": {
+    "low": 0.0,
+    "med": 1.272727272727273,
+    "high": 21.545454545454547,
+    "burst": 44.54545454545455
+   },
+   "paired_vs_maxmin": {
+    "diff": 582.9832999999999,
+    "ci95": [
+     346.7653,
+     766.2976000000001
+    ]
+   },
+   "repair_changes": 7
+  }
+ },
+ "A3 per-slot re-solve, no inter-slot rules (G3)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    1,
+    "Finance_DB_Server"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    1,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    1,
+    "HR_Workstation"
+   ],
+   [
+    "smb_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    0,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    1,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "DMZ",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "web_trap",
+    "Internal",
+    2,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 12,
+  "violations": {
+   "C10b": 3
+  },
+  "feasible": false,
+  "model": {
+   "low": 6328.64,
+   "med": 6339.54,
+   "high": 3133.91,
+   "burst": 3390.39
+  },
+  "worst_case": 3133.91,
+  "worst_profile": "high",
+  "burn_burst_pct": 66.66666666666667,
+  "pburn_burst_pct": 66.66666666666667,
+  "tburn_burst_pct": 33.333333333333336,
+  "C14_leaks": 0,
+  "path_persistence_pct": 25.0,
+  "early_intercept_med_pct": 50.0,
+  "hop_coverage_med_pct": 26.923076923076923,
+  "emulated": {
+   "low": 1907.068,
+   "med": 2141.8641,
+   "high": 1438.0399,
+   "burst": 1325.2377000000001
+  },
+  "emulated_worst_mean": 1325.2377000000001,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 1.0833333333333335,
+   "high": 22.75,
+   "burst": 48.66666666666667
+  },
+  "paired_vs_maxmin": {
+   "diff": 704.9091000000001,
+   "ci95": [
+    482.5217,
+    876.4940999999999
+   ]
+  },
+  "solve_seconds": 8.3,
+  "repaired": {
+   "schedule": [
+    [
+     "db_trap",
+     "Cloud",
+     1,
+     "Finance_DB_Server"
+    ],
+    [
+     "db_trap",
+     "Cloud",
+     2,
+     "Finance_DB_Server"
+    ],
+    [
+     "db_trap",
+     "Internal",
+     0,
+     "Finance_DB_Server"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     0,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     1,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     3,
+     "Generic_Linux"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     0,
+     "HR_Workstation"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     1,
+     "HR_Workstation"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     3,
+     "DevOps_JumpHost"
+    ],
+    [
+     "smb_trap",
+     "Internal",
+     2,
+     "HR_Workstation"
+    ],
+    [
+     "web_trap",
+     "Cloud",
+     0,
+     "DevOps_JumpHost"
+    ],
+    [
+     "web_trap",
+     "Cloud",
+     1,
+     "DevOps_JumpHost"
+    ],
+    [
+     "web_trap",
+     "DMZ",
+     2,
+     "Generic_Linux"
+    ],
+    [
+     "web_trap",
+     "Internal",
+     2,
+     "DevOps_JumpHost"
+    ]
+   ],
+   "deployments": 14,
+   "violations": {},
+   "feasible": true,
+   "model": {
+    "low": 6183.22,
+    "med": 6147.61,
+    "high": 3133.91,
+    "burst": 3390.39
+   },
+   "worst_case": 3133.91,
+   "worst_profile": "high",
+   "burn_burst_pct": 71.42857142857143,
+   "pburn_burst_pct": 71.42857142857143,
+   "tburn_burst_pct": 28.571428571428573,
+   "C14_leaks": 0,
+   "path_persistence_pct": 100.0,
+   "early_intercept_med_pct": 50.0,
+   "hop_coverage_med_pct": 25.0,
+   "emulated": {
+    "low": 2190.8143,
+    "med": 2608.6377,
+    "high": 1687.8375,
+    "burst": 1367.189
+   },
+   "emulated_worst_mean": 1367.189,
+   "emulated_recognized_pct": {
+    "low": 0.0,
+    "med": 1.0,
+    "high": 24.142857142857142,
+    "burst": 51.214285714285715
+   },
+   "paired_vs_maxmin": {
+    "diff": 662.9578000000001,
+    "ci95": [
+     400.18450000000007,
+     844.326
+    ]
+   },
+   "repair_changes": 4
+  }
+ },
+ "A3h full horizon, no inter-slot rules (G3, supplementary)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "smb_trap",
+    "Internal",
+    1,
+    "Finance_DB_Server"
+   ],
+   [
+    "smb_trap",
+    "Internal",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    1,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    3,
+    "HR_Workstation"
+   ]
+  ],
+  "deployments": 11,
+  "violations": {
+   "C8": 3,
+   "C10b": 2
+  },
+  "feasible": false,
+  "model": {
+   "low": 7752.55,
+   "med": 9988.33,
+   "high": 7788.11,
+   "burst": 8245.99
+  },
+  "worst_case": 7752.55,
+  "worst_profile": "low",
+  "burn_burst_pct": 27.272727272727273,
+  "pburn_burst_pct": 27.272727272727273,
+  "tburn_burst_pct": 0.0,
+  "C14_leaks": 0,
+  "path_persistence_pct": 75.0,
+  "early_intercept_med_pct": 87.5,
+  "hop_coverage_med_pct": 32.69230769230769,
+  "emulated": {
+   "low": 2160.6442,
+   "med": 2747.8082,
+   "high": 2324.9201,
+   "burst": 2392.2306
+  },
+  "emulated_worst_mean": 2160.6442,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.0,
+   "high": 9.727272727272728,
+   "burst": 19.545454545454547
+  },
+  "paired_vs_maxmin": {
+   "diff": -130.4974000000002,
+   "ci95": [
+    -284.12789999999995,
+    -94.0304000000001
+   ]
+  },
+  "solve_seconds": 79.3,
+  "repaired": {
+   "schedule": [
+    [
+     "db_trap",
+     "Cloud",
+     0,
+     "Finance_DB_Server"
+    ],
+    [
+     "db_trap",
+     "Cloud",
+     2,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     0,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     1,
+     "Generic_Linux"
+    ],
+    [
+     "ot_trap",
+     "OT",
+     3,
+     "Generic_Linux"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     0,
+     "HR_Workstation"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     1,
+     "HR_Workstation"
+    ],
+    [
+     "rdp_trap",
+     "Internal",
+     2,
+     "HR_Workstation"
+    ],
+    [
+     "smb_trap",
+     "Internal",
+     3,
+     "Finance_DB_Server"
+    ],
+    [
+     "ssh_trap",
+     "DMZ",
+     1,
+     "DevOps_JumpHost"
+    ],
+    [
+     "ssh_trap",
+     "DMZ",
+     2,
+     "DevOps_JumpHost"
+    ],
+    [
+     "ssh_trap",
+     "DMZ",
+     3,
+     "DevOps_JumpHost"
+    ],
+    [
+     "web_trap",
+     "Cloud",
+     3,
+     "HR_Workstation"
+    ]
+   ],
+   "deployments": 13,
+   "violations": {},
+   "feasible": true,
+   "model": {
+    "low": 5761.38,
+    "med": 7355.15,
+    "high": 4681.42,
+    "burst": 5250.78
+   },
+   "worst_case": 4681.42,
+   "worst_profile": "high",
+   "burn_burst_pct": 61.53846153846154,
+   "pburn_burst_pct": 61.53846153846154,
+   "tburn_burst_pct": 38.46153846153846,
+   "C14_leaks": 0,
+   "path_persistence_pct": 100.0,
+   "early_intercept_med_pct": 62.5,
+   "hop_coverage_med_pct": 26.923076923076923,
+   "emulated": {
+    "low": 2112.2372,
+    "med": 2750.4696,
+    "high": 1990.6326999999999,
+    "burst": 1916.4413
+   },
+   "emulated_worst_mean": 1916.4413,
+   "emulated_recognized_pct": {
+    "low": 0.0,
+    "med": 1.0769230769230769,
+    "high": 18.923076923076923,
+    "burst": 44.23076923076923
+   },
+   "paired_vs_maxmin": {
+    "diff": 113.70550000000003,
+    "ci95": [
+     -76.97860000000014,
+     317.43079999999986
+    ]
+   },
+   "repair_changes": 6
+  }
+ },
+ "A4 expected payoff, uniform prior (G4)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    1,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ssh_trap",
+    "Internal",
+    1,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 11,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 7247.03,
+   "med": 9513.64,
+   "high": 7052.62,
+   "burst": 7950.3
+  },
+  "worst_case": 7052.62,
+  "worst_profile": "high",
+  "burn_burst_pct": 27.272727272727273,
+  "pburn_burst_pct": 27.272727272727273,
+  "tburn_burst_pct": 27.272727272727273,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 81.25,
+  "hop_coverage_med_pct": 34.61538461538461,
+  "emulated": {
+   "low": 2022.0009,
+   "med": 2551.8679,
+   "high": 2070.9203,
+   "burst": 2278.1871
+  },
+  "emulated_worst_mean": 2022.0009,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.0,
+   "high": 9.90909090909091,
+   "burst": 19.90909090909091
+  },
+  "paired_vs_maxmin": {
+   "diff": 8.145899999999983,
+   "ci95": [
+    -46.92919999999981,
+    64.3276000000003
+   ]
+  },
+  "solve_seconds": 359.8
+ },
+ "A4-low expected payoff, prior 0.7 on theta_low (G4)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    1,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "db_trap",
+    "Internal",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    1,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    1,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "smb_trap",
+    "Internal",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    2,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    0,
+    "DevOps_JumpHost"
+   ],
+   [
+    "web_trap",
+    "Cloud",
+    3,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 13,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 8317.12,
+   "med": 9887.05,
+   "high": 5982.84,
+   "burst": 6204.95
+  },
+  "worst_case": 5982.84,
+  "worst_profile": "high",
+  "burn_burst_pct": 53.84615384615385,
+  "pburn_burst_pct": 53.84615384615385,
+  "tburn_burst_pct": 23.076923076923077,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 87.5,
+  "hop_coverage_med_pct": 30.76923076923077,
+  "emulated": {
+   "low": 2310.0478,
+   "med": 2943.8885,
+   "high": 2149.9556,
+   "burst": 2012.2742
+  },
+  "emulated_worst_mean": 2012.2742,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.3076923076923077,
+   "high": 18.384615384615383,
+   "burst": 39.0
+  },
+  "paired_vs_maxmin": {
+   "diff": 17.87259999999992,
+   "ci95": [
+    -213.9396999999999,
+    210.3660000000002
+   ]
+  },
+  "solve_seconds": 361.0
+ },
+ "A4-med expected payoff, prior 0.7 on theta_med (G4)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "dns_trap",
+    "Cloud",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "DevOps_JumpHost"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "smb_trap",
+    "Internal",
+    1,
+    "HR_Workstation"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    1,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 12,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 7879.23,
+   "med": 10497.84,
+   "high": 4715.04,
+   "burst": 6227.11
+  },
+  "worst_case": 4715.04,
+  "worst_profile": "high",
+  "burn_burst_pct": 50.0,
+  "pburn_burst_pct": 41.666666666666664,
+  "tburn_burst_pct": 25.0,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 93.75,
+  "hop_coverage_med_pct": 34.61538461538461,
+  "emulated": {
+   "low": 2162.4826,
+   "med": 2839.6513,
+   "high": 1933.9936,
+   "burst": 2088.3986
+  },
+  "emulated_worst_mean": 1933.9936,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.16666666666666669,
+   "high": 16.0,
+   "burst": 35.333333333333336
+  },
+  "paired_vs_maxmin": {
+   "diff": 96.1532000000002,
+   "ci95": [
+    -122.12739999999985,
+    242.72250000000008
+   ]
+  },
+  "solve_seconds": 201.8
+ },
+ "A4-high expected payoff, prior 0.7 on theta_high (G4)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    1,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ssh_trap",
+    "Internal",
+    1,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 11,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 7247.03,
+   "med": 9513.64,
+   "high": 7052.62,
+   "burst": 7950.3
+  },
+  "worst_case": 7052.62,
+  "worst_profile": "high",
+  "burn_burst_pct": 27.272727272727273,
+  "pburn_burst_pct": 27.272727272727273,
+  "tburn_burst_pct": 27.272727272727273,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 81.25,
+  "hop_coverage_med_pct": 34.61538461538461,
+  "emulated": {
+   "low": 2022.0009,
+   "med": 2551.8679,
+   "high": 2070.9203,
+   "burst": 2278.1871
+  },
+  "emulated_worst_mean": 2022.0009,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.0,
+   "high": 9.90909090909091,
+   "burst": 19.90909090909091
+  },
+  "paired_vs_maxmin": {
+   "diff": 8.145899999999983,
+   "ci95": [
+    -46.92919999999981,
+    64.3276000000003
+   ]
+  },
+  "solve_seconds": 63.7
+ },
+ "A4-burst expected payoff, prior 0.7 on theta_burst (G4)": {
+  "schedule": [
+   [
+    "db_trap",
+    "Cloud",
+    0,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    2,
+    "Finance_DB_Server"
+   ],
+   [
+    "db_trap",
+    "Cloud",
+    3,
+    "Finance_DB_Server"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    0,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    2,
+    "Generic_Linux"
+   ],
+   [
+    "ot_trap",
+    "OT",
+    3,
+    "Generic_Linux"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    0,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    2,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Internal",
+    3,
+    "HR_Workstation"
+   ],
+   [
+    "rdp_trap",
+    "Mgmt",
+    3,
+    "DevOps_JumpHost"
+   ],
+   [
+    "ssh_trap",
+    "DMZ",
+    1,
+    "DevOps_JumpHost"
+   ]
+  ],
+  "deployments": 11,
+  "violations": {},
+  "feasible": true,
+  "model": {
+   "low": 6737.95,
+   "med": 9606.13,
+   "high": 6610.37,
+   "burst": 8379.09
+  },
+  "worst_case": 6610.37,
+  "worst_profile": "high",
+  "burn_burst_pct": 27.272727272727273,
+  "pburn_burst_pct": 27.272727272727273,
+  "tburn_burst_pct": 27.272727272727273,
+  "C14_leaks": 0,
+  "path_persistence_pct": 100.0,
+  "early_intercept_med_pct": 87.5,
+  "hop_coverage_med_pct": 34.61538461538461,
+  "emulated": {
+   "low": 1724.2867,
+   "med": 2483.8803,
+   "high": 2053.8162,
+   "burst": 2587.591
+  },
+  "emulated_worst_mean": 1724.2867,
+  "emulated_recognized_pct": {
+   "low": 0.0,
+   "med": 0.0,
+   "high": 8.545454545454547,
+   "burst": 18.81818181818182
+  },
+  "paired_vs_maxmin": {
+   "diff": 305.8600999999999,
+   "ci95": [
+    101.09619999999995,
+    379.41149999999993
+   ]
+  },
+  "solve_seconds": 29.3
+ }
+}
